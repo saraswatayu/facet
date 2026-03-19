@@ -10,6 +10,18 @@ The product config has been provided as a separate file — you should have alre
 
 Produce a comprehensive study plan. The plan must include ALL of the following sections:
 
+### 0. Perspective Brainstorm (do NOT include in output — this is a thinking step)
+
+Before designing segments, brainstorm 6 radically different people who might encounter this product:
+1. Someone who would LOVE it immediately — why?
+2. Someone who would be deeply skeptical — what's their objection?
+3. Someone who would use it "wrong" or for an unintended purpose
+4. Someone for whom price is the only thing that matters
+5. Someone who already has a perfect workaround and doesn't need this
+6. Someone who doesn't even know they have the problem this solves
+
+For each, note in one sentence: who they are, what they care about, and how they'd discover this product. Use these perspectives to inform the segment matrix below — segments should capture this full range of relationships to the product, not just variations of "interested buyer."
+
 ### 1. Segment Matrix
 
 Design the requested number of segments. Each segment is defined by the JOB the product does for them, not by demographics alone.
