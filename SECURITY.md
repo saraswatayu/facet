@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Email ayush@perch.deals with details. Expect a response within 7 days. Do not open public issues for security vulnerabilities.
+Email saraswatayu@gmail.com with details. Expect a response within 7 days. Do not open public issues for security vulnerabilities.
 
 ## Scope
 
