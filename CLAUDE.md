@@ -80,8 +80,11 @@ Two types of config:
 # Initialize: plan + generate persona backgrounds
 ./sim.sh init --config examples/perch-product.md --name perch
 
-# Initialize with calibration data (real research grounding)
+# Initialize with calibration data (single file)
 ./sim.sh init --config examples/perch-product.md --name perch --calibration real-survey-data.md
+
+# Initialize with calibration data directory (multiple files)
+./sim.sh init --config examples/perch-product.md --name perch --calibration ./research-data/
 
 # Run exercises against existing personas
 ./sim.sh exercise --study output/perch/ --config examples/perch-pricing.md
