@@ -39,7 +39,9 @@ The accuracy hierarchy is clear:
 | Rich prompting | ~70-75% | **Facet** |
 | Naive LLM query | ~63% | "Hey ChatGPT, would you buy this?" |
 
-Facet is in the fourth row. That's honest. It's also a meaningful step up from asking ChatGPT, and it's free, open source, and auditable.
+Facet is in the fourth row by default. But if you feed it your own research data — past surveys, support tickets, interview transcripts, analytics — it moves up. The Stanford research that achieved 85% accuracy did so by grounding agents in real interview data. Facet's `--calibration` flag does the same thing: point it at your internal docs and the personas ground themselves in your actual users, not LLM priors.
+
+Free, open source, and auditable.
 
 ---
 
