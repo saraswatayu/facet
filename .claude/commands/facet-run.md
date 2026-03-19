@@ -6,8 +6,8 @@ $ARGUMENTS
 
 Expected: `<study-dir> <exercise-config-path> [--concurrency <N>]`
 
-- Study directory is required (e.g., `output/perch/`). Must contain `personas/` with generated persona files.
-- Exercise config path is required (e.g., `examples/perch-pricing.md`).
+- Study directory is required (e.g., `output/superhuman/`). Must contain `personas/` with generated persona files.
+- Exercise config path is required (e.g., `examples/superhuman-pricing.md`).
 - `--concurrency` sets parallel simulation limit (default: 5)
 
 If arguments are missing, ask the user.

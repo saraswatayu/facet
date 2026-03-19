@@ -114,10 +114,10 @@ study-types/
   copy.md               — ELM, construal level, framing effects, per-variant scoring
   features.md           — Kano model, feature interaction, prioritization caveats
 examples/
-  perch-product.md      — example product config (10 segments × 5 personas)
-  perch-pricing.md      — example pricing exercise (flat fee vs commission)
-  perch-copy.md         — example copy exercise (6 variants)
-  perch-features.md     — example features exercise
+  superhuman-product.md — example product config (10 segments × 5 personas)
+  superhuman-pricing.md — example pricing exercise (3 tier models)
+  superhuman-copy.md    — example copy exercise (6 positioning variants)
+  superhuman-features.md — example features exercise
 research/               — ~490-source research reports informing template design
 .claude/commands/
   facet-init.md         — Claude Code skill for init pipeline
@@ -172,7 +172,7 @@ These are invariants — do not break them:
 1. Create `study-types/{name}.md` following the pattern in existing study types
 2. Include: caveat section, what it tests, simulation framework, per-persona metrics, outcome requirements
 3. Create an example exercise config in `examples/` with matching `study_type` in frontmatter
-4. Test: `./sim.sh init --config examples/perch-product.md --name test` then `./sim.sh exercise --study output/test/ --config examples/your-exercise.md`
+4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh exercise --study output/test/ --config examples/your-exercise.md`
 5. Review the synthesis — does it produce actionable recommendations?
 
 No code changes needed in sim.sh — it reads `study_type` from frontmatter and loads `study-types/{type}.md` automatically.

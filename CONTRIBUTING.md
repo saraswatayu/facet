@@ -46,7 +46,7 @@ Add new exercise types (beyond pricing, copy, features) by creating `study-types
 
 - sim.sh uses `set -euo pipefail` — keep it that way
 - No new dependencies beyond bash, Python 3 stdlib, and Claude CLI
-- Test with: `./sim.sh init --config examples/perch-product.md --name test`
+- Test with: `./sim.sh init --config examples/superhuman-product.md --name test`
 - Claude Code skills in `.claude/commands/` follow the same patterns — Agent tool for isolation, Sonnet for generation/simulation
 
 ### Research Additions
@@ -63,8 +63,8 @@ The `research/` directory contains reports synthesizing ~490 academic sources. T
 2. Verify dependencies: `claude --version`, `python3 --version`, `bash --version`
 3. Run an example study:
    ```bash
-   ./sim.sh init --config examples/perch-product.md --name test
-   ./sim.sh exercise --study output/test/ --config examples/perch-pricing.md
+   ./sim.sh init --config examples/superhuman-product.md --name test
+   ./sim.sh exercise --study output/test/ --config examples/superhuman-pricing.md
    ```
 4. Check output in `output/test/`
 

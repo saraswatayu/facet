@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Facet v2 — Pre-Launch Simulation Engine
 # Usage:
-#   ./sim.sh init     --config examples/perch-product.md [--name perch] [--concurrency 5] [--calibration data.md]
-#   ./sim.sh exercise --study output/perch/ --config examples/perch-pricing.md [--concurrency 5]
-#   ./sim.sh status   --study output/perch/
+#   ./sim.sh init     --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md]
+#   ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md [--concurrency 5]
+#   ./sim.sh status   --study output/superhuman/
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
@@ -706,12 +706,12 @@ main() {
             echo "  --calibration Path to calibration data file OR directory (real research data to ground personas)"
             echo ""
             echo "Workflow:"
-            echo "  1. Create a product config (see examples/perch-product.md)"
-            echo "  2. ./sim.sh init --config examples/perch-product.md --name perch"
-            echo "  3. Create exercise configs (see examples/perch-pricing.md)"
-            echo "  4. ./sim.sh exercise --study output/perch/ --config examples/perch-pricing.md"
+            echo "  1. Create a product config (see examples/superhuman-product.md)"
+            echo "  2. ./sim.sh init --config examples/superhuman-product.md --name superhuman"
+            echo "  3. Create exercise configs (see examples/superhuman-pricing.md)"
+            echo "  4. ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md"
             echo "  5. Run more exercises against the same personas:"
-            echo "     ./sim.sh exercise --study output/perch/ --config examples/perch-copy.md"
+            echo "     ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-copy.md"
             ;;
         *)
             echo "Unknown command: $cmd"

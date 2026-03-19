@@ -12,9 +12,9 @@
 
 ## Testing
 
-<!-- How did you verify this change? e.g., "Ran init + pricing exercise with examples/perch-product.md" -->
+<!-- How did you verify this change? e.g., "Ran init + pricing exercise with examples/superhuman-product.md" -->
 
-- [ ] Tested with `./sim.sh init --config examples/perch-product.md --name test`
+- [ ] Tested with `./sim.sh init --config examples/superhuman-product.md --name test`
 - [ ] Tested with at least one exercise type
 - [ ] N/A (docs-only change)
 

@@ -52,15 +52,15 @@ Built on the Claude CLI. No UI, no framework — just bash, prompt templates, an
 
 ```bash
 # 1. Initialize: plan + generate persona backgrounds
-./sim.sh init --config examples/perch-product.md --name perch
+./sim.sh init --config examples/superhuman-product.md --name superhuman
 
 # 2. Run exercises against existing personas
-./sim.sh exercise --study output/perch/ --config examples/perch-pricing.md
-./sim.sh exercise --study output/perch/ --config examples/perch-copy.md
-./sim.sh exercise --study output/perch/ --config examples/perch-features.md
+./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md
+./sim.sh exercise --study output/superhuman/ --config examples/superhuman-copy.md
+./sim.sh exercise --study output/superhuman/ --config examples/superhuman-features.md
 
 # 3. Check status
-./sim.sh status --study output/perch/
+./sim.sh status --study output/superhuman/
 ```
 
 ### Options
@@ -78,7 +78,7 @@ Built on the Claude CLI. No UI, no framework — just bash, prompt templates, an
 Ground personas in real-world survey/research data instead of relying solely on LLM priors:
 
 ```bash
-./sim.sh init --config examples/perch-product.md --name perch --calibration real-survey-data.md
+./sim.sh init --config examples/superhuman-product.md --name superhuman --calibration real-survey-data.md
 ```
 
 ## Config Format
@@ -93,47 +93,49 @@ segments: 10
 personas_per_segment: 5
 ---
 
-# Product: Perch
+# Product: Superhuman
 
-Perch is a flight price tracking and automatic rebooking service...
+Superhuman is a premium email client built for speed...
 
 ## Key Product Details
-- Works with all major US airlines
-- Handles rebooking automatically
-- Domestic flights: ~35% see a price drop, average savings ~$55
+- $30/month per user, works with Gmail and Outlook
+- AI features: summarize threads, draft replies, auto-triage
+- Keyboard-first design, every interaction under 100ms
 
 ## Target Market
-- Frequent flyers
-- Budget-conscious travelers
-- Families booking multiple tickets
+- Startup founders and CEOs
+- Sales professionals
+- Venture capitalists and investors
 ```
 
 ### Exercise Config (for `exercise`)
 
 ```yaml
 ---
-exercise_name: pricing-flat-vs-commission
+exercise_name: pricing-tiers
 study_type: pricing
 options:
   - name: "Model A"
-    description: "$49/year flat fee — user keeps all savings"
+    description: "$30/month flat — current pricing, no free tier"
   - name: "Model B"
-    description: "Free signup, 15% commission on savings found"
+    description: "Free tier + $30/month Pro — freemium with AI features gated"
+  - name: "Model C"
+    description: "$15/month Starter + $30/month Pro — two paid tiers"
 copy_variants: true
 ---
 
 ## Options to Test
 
-### Model A: $49/year flat fee
-User pays $49/year upfront...
+### Model A: $30/month flat (status quo)
+One plan, one price, every feature...
 
-### Model B: Free signup, 15% commission
-User signs up for free...
+### Model B: Free tier + $30/month Pro
+Free tier with core speed. AI features gated behind $30/month...
 
 ## Copy Variants
 
-### Variant A: "Flat Fee, Clean"
-$49/year. Every drop is yours.
+### Variant A: "Premium, Unapologetic"
+$30/month. The fastest email experience ever made.
 ```
 
 Study types: `pricing`, `copy`, `features` (rules in `study-types/`).
@@ -224,10 +226,10 @@ study-types/
   copy.md               # simulation rules for copy exercises
   features.md           # simulation rules for feature exercises
 examples/
-  perch-product.md      # example product config
-  perch-pricing.md      # example pricing exercise
-  perch-copy.md         # example copy exercise
-  perch-features.md     # example features exercise
+  superhuman-product.md # example product config
+  superhuman-pricing.md # example pricing exercise
+  superhuman-copy.md    # example copy exercise
+  superhuman-features.md # example features exercise
 research/               # ~490-source research reports informing template design
 output/                 # generated studies (gitignored)
 ```
