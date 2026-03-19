@@ -2,3 +2,4 @@ output/
 .env
 *.log
 .DS_Store
+TODOS.md
