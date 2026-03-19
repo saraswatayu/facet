@@ -1,8 +1,8 @@
 # Study Planning Instructions
 
-You are designing a behavioral simulation study. Your job is to create a detailed plan that ensures the study produces diverse, realistic, and insightful personas.
+You are designing persona backgrounds for a behavioral simulation study. Your job is to create a detailed plan that ensures the study produces diverse, realistic, and insightful personas that can be reused across multiple exercises.
 
-The study config and study-type rules have been provided as separate files — you should have already read them before reading this template.
+The product config has been provided as a separate file — you should have already read it before reading this template.
 
 ---
 
@@ -28,7 +28,7 @@ Requirements:
   - Key demographic traits (income range, age range, location type)
   - Key psychographic traits (decision-making style, risk tolerance, tech comfort)
   - Expected behavior with this product (power user? skeptic? champion? churner?)
-  - Why this segment matters for the business question being asked
+  - Why this segment matters for understanding the product's market
 
 ### 2. Persona Outlines
 
@@ -50,24 +50,23 @@ Diversity requirements across the full study:
 - Mix of genders, relationship structures, and living situations
 - No two personas should have the same job title
 
-### 3. Simulation Parameters
+### 3. Cross-Reference Plan
 
-Define the quantitative framework for the simulations:
-- What metrics should be tracked per option? (e.g., cost to user, value received, net benefit, ROI)
-- What constitutes "success" for each option from the user's perspective?
-- What constitutes "success" for each option from the company's perspective?
-- Is there a crossover point where user preference switches between options? If so, define the framework for calculating it.
-- What referral/viral dynamics should be modeled?
+Design the social fabric of the study. These connections will be baked into persona backgrounds during generation (there is no separate weave phase).
 
-### 4. Cross-Reference Plan
+For each connection, specify:
+- The two personas involved (by name and number)
+- The nature of their relationship (colleague, neighbor, family, same community, etc.)
+- The direction of likely product referral (who would tell whom)
+- A one-line description of how the referral would happen
 
-Design the social fabric of the study:
-- Which personas could realistically know each other? (same city, same profession, same community, family connections)
-- What referral chains are plausible? (e.g., tech-savvy family member -> overwhelmed parent)
-- Which segments have group dynamics that amplify or dampen adoption? (wedding groups, friend groups, workplace teams, family group chats)
-- Which personas could serve as "bridge" personas connecting two segments?
+Requirements:
+- At least 3 referral chains (A→B→C, not just isolated pairs)
+- Connections must be REALISTIC given both personas' profiles (same city, same profession, same community, family connections)
+- Include at least 1 "bridge" persona connecting two different segments
+- Aim for 8-15 cross-references across the full study (not every persona needs one)
 
-### 5. Name Registry
+### 4. Name Registry
 
 List ALL persona names in a flat list. This will be passed to each persona generation call to prevent name collisions.
 
@@ -78,7 +77,5 @@ List ALL persona names in a flat list. This will be passed to each persona gener
 - [ ] Every segment is distinct and contributes a unique perspective
 - [ ] No two personas have the same name or extremely similar names
 - [ ] Geographic, demographic, and psychographic diversity is genuine
-- [ ] At least 2 segments will likely go unanimously for each option (creates clear signal)
-- [ ] At least 1 segment will be closely split (creates nuance)
 - [ ] The cross-reference plan includes at least 3 plausible referral chains
-- [ ] Simulation parameters are specific enough to produce quantitative comparisons
+- [ ] Cross-references specify exact persona numbers so generators can include them

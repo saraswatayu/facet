@@ -1,10 +1,12 @@
 # Persona Generation Instructions
 
-You are generating a single persona for a behavioral simulation study.
+You are generating a single persona background for a behavioral simulation study.
 
-The study config, plan (with segment matrix, persona outlines, and name registry), and study-type rules have been provided as separate files — you should have already read them before reading this template.
+The product config and plan (with segment matrix, persona outlines, and name registry) have been provided as separate files — you should have already read them before reading this template.
 
-Find your assigned persona number in the plan's persona outlines. Generate a complete, deeply detailed persona for that outline.
+Find your assigned persona number in the plan's persona outlines. Generate a complete, deeply detailed persona background for that outline.
+
+**Important:** This persona file contains ONLY the person's background — identity, psychology, domain behavior, and discovery story. It does NOT contain option simulations, verdicts, or copy reactions. Those are generated separately as exercises.
 
 ---
 
@@ -32,7 +34,7 @@ Create a complete person:
 How this person thinks about money and decisions in the context of this product's domain:
 - Their relationship with spending in this category (philosophy, constraints, habits)
 - Current subscriptions, tools, or services in this space (with specific costs)
-- How they feel about the specific pricing/feature structures being tested
+- Their general disposition toward pricing models (subscriptions vs. pay-per-use vs. free-with-commission, etc.)
 - A specific money/decision memory — a formative experience that shapes how they evaluate products like this one. This memory should be vivid, emotional, and explanatory.
 
 ### 3. DOMAIN PROFILE
@@ -53,56 +55,23 @@ How they find this product — be SPECIFIC about the vector:
 - How long they deliberated and what decided it
 - If discovered through referral: the exact conversation, who said what
 
-### 5+ OPTION SIMULATIONS
+### 5. CROSS-REFERENCES
 
-**Create one section per option being tested.** For each option:
+If the plan's cross-reference section identifies connections for this persona, include them here:
+- Which other personas this person could realistically know (reference by name and persona number)
+- The nature of the relationship (colleague, neighbor, family, same community, etc.)
+- How this connection might lead to product referrals (who would tell whom, in what context)
 
-**Signup/Purchase Decision:**
-- Internal monologue during the decision (quoted, in their voice, with their vocabulary)
-- Whether they convert and why/why not
-- If they don't convert: what would change their mind? What's the counterfactual?
+If no cross-references are specified in the plan for this persona, write: "No planned cross-references."
 
-**12-Month Usage Simulation (if they convert):**
-- Specific, quantified interactions over 12 months (3-8 events with dates, amounts, details)
-- A simulation table showing each interaction, the outcome, and running totals
-- Emotional reactions at key moments (the first success, the first friction point, the moment of realization)
+---
 
-**12-Month Totals:**
-- Gross value received
-- Total cost to user (fees, subscription, etc.)
-- Net value to user (gross - cost)
-- Effective cost rate (cost / gross value, as percentage)
+## What NOT to Include
 
-**Renewal/Repurchase Decision:**
-- Internal monologue at renewal moment
-- Whether they continue and why
-
-**Referral Behavior:**
-- Who they tell (specific people, not "friends")
-- How they describe it (exact words they'd use)
-- The referral story — does it travel cleanly or get muddled?
-
-**NPS Score (0-10) with justification:**
-- Why this specific number, not one higher or lower
-
-### VERDICT
-
-After all option simulations:
-- Which option this persona prefers and why (in their own voice, quoted)
-- Which option generates more revenue for the company from this persona
-- Which option makes this persona more likely to refer others
-- One representative quote per option (something they'd actually say)
-
-### COPY VARIANT REACTIONS (only if copy variants are defined in the study config)
-
-For each copy variant:
-- Internal monologue when reading it (in character, using their vocabulary)
-- Scores on 4 dimensions (0-10 each):
-  - **Clarity**: How quickly they understand what the product does and costs
-  - **Trust**: How much they believe the claims
-  - **Motivation**: How strongly they want to act
-  - **Shareability**: How likely they are to forward/screenshot/quote this to someone
-- Primary objection (the one thing that gives them pause)
-- Would they click the CTA? (yes/no/maybe, with reasoning)
-
-After all variants: Final ranking (best to worst for THIS persona) with one-line reasoning per variant.
+Do NOT include any of the following (these belong in exercise simulations, not persona backgrounds):
+- Option simulations or signup decisions
+- 12-month usage projections
+- Verdicts or option preferences
+- Copy variant reactions
+- NPS scores
+- Referral behavior for specific product options
