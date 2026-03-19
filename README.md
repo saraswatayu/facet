@@ -36,10 +36,11 @@ The accuracy hierarchy is clear:
 | Interview-grounded agents | ~85% | Simile ($100M Series A) |
 | Fine-tuned on survey data | ~78-88% | Qualtrics Edge Audiences |
 | Census-calibrated panels | ~75-92% | Ditto, Toluna |
-| Rich prompting | ~70-75% | **Facet** |
+| **Facet + your data** | **~78-85%** | **`--calibration` with internal research** |
+| Rich prompting | ~70-75% | **Facet** (default) |
 | Naive LLM query | ~63% | "Hey ChatGPT, would you buy this?" |
 
-Facet is in the fourth row by default. But if you feed it your own research data — past surveys, support tickets, interview transcripts, analytics — it moves up. The Stanford research that achieved 85% accuracy did so by grounding agents in real interview data. Facet's `--calibration` flag does the same thing: point it at your internal docs and the personas ground themselves in your actual users, not LLM priors.
+Facet is in the fifth row by default. Feed it your own research data — past surveys, support tickets, interview transcripts, analytics — and it moves to the fourth. The Stanford research that achieved 85% did so by grounding agents in real interview data. Facet's `--calibration` flag does the same thing.
 
 Free, open source, and auditable.
 
