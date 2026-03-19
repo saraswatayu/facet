@@ -112,6 +112,18 @@ Output a table showing each persona's position on each diversity axis:
 
 Verify: no column has more than 50% of values in a single category. If it does, adjust persona outlines to improve coverage.
 
+### 6. Calibration Sources (only if calibration data was provided)
+
+If calibration data was provided (file or directory), add this section to the plan output:
+
+For each calibration file you read, document:
+- **File**: filename and path
+- **Type**: survey data, interview transcript, analytics, support tickets, competitor analysis, etc.
+- **Key findings**: 3-5 bullet points of patterns, quotes, or data points you extracted
+- **How used**: which segments or persona attributes were grounded in this data
+
+This section serves as an audit trail — downstream persona generators can use it to find the most relevant calibration files for their specific segment.
+
 ---
 
 ## Quality Checklist (verify before writing)
