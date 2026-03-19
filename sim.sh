@@ -501,13 +501,17 @@ show_status() {
     if [ -f "$status_file" ]; then
         echo ""
         echo "Phase history:"
-        while IFS= read -r line; do
-            local phase status ts
-            phase=$(echo "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['phase'])" 2>/dev/null || echo "?")
-            status=$(echo "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "?")
-            ts=$(echo "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['timestamp'])" 2>/dev/null || echo "?")
-            echo "  ${phase}: ${status} (${ts})"
-        done < "$status_file"
+        python3 -c "
+import json, sys
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try:
+        obj = json.loads(line)
+        print(f\"  {obj.get('phase','?')}: {obj.get('status','?')} ({obj.get('timestamp','?')})\")
+    except json.JSONDecodeError:
+        pass
+" < "$status_file"
     fi
 
     # Also show exercise-level status
@@ -517,13 +521,17 @@ show_status() {
             if [ -f "$estatus" ]; then
                 echo ""
                 echo "  Exercise: $(basename "$exercise")"
-                while IFS= read -r line; do
-                    local phase status ts
-                    phase=$(echo "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['phase'])" 2>/dev/null || echo "?")
-                    status=$(echo "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['status'])" 2>/dev/null || echo "?")
-                    ts=$(echo "$line" | python3 -c "import sys,json;print(json.load(sys.stdin)['timestamp'])" 2>/dev/null || echo "?")
-                    echo "    ${phase}: ${status} (${ts})"
-                done < "$estatus"
+                python3 -c "
+import json, sys
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try:
+        obj = json.loads(line)
+        print(f\"    {obj.get('phase','?')}: {obj.get('status','?')} ({obj.get('timestamp','?')})\")
+    except json.JSONDecodeError:
+        pass
+" < "$estatus"
             fi
         done
     fi
