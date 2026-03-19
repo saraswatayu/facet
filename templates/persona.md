@@ -114,7 +114,7 @@ Their behavior patterns relevant to this product:
 - Current tools and workarounds
 - Pain points they experience today
 - How they plan, decide, and act in this domain
-- Specific recent examples with temporal grounding — include WHEN they formed key habits (e.g., "been using Google Flights since 2019," "switched to this method after a bad experience in 2021"). This prevents all personas from reasoning only from current-era perspectives.
+- Specific recent examples with temporal grounding — include WHEN they formed key habits (e.g., "been using this tool since 2019," "switched to this method after a bad experience in 2021"). This prevents all personas from reasoning only from current-era perspectives.
 
 ### 4. DISCOVERY
 

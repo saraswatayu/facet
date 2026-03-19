@@ -135,9 +135,9 @@ After all variants: **Final ranking** (best to worst for THIS persona) with one-
 
 ## Consistency Rules
 
-- Every dollar amount must be traceable. If the persona saves $180 on a flight, that number must appear in the simulation table, the 12-month totals, and the verdict's revenue comparison.
+- Every dollar amount must be traceable. If the persona saves $180 on a transaction, that number must appear in the simulation table, the 12-month totals, and the verdict's revenue comparison.
 - The persona's behavior must be consistent with their background. A persona who described subscription fatigue should show that fatigue in their signup decision. A persona who keeps a regret-score spreadsheet should reference it.
-- Usage patterns must match the persona's domain profile. A persona who flies twice a year should not have eight flight interactions. A power user should not have two.
+- Usage patterns must match the persona's domain profile. A light user should not have heavy-user interaction counts. A power user should not have two interactions in 12 months.
 - Emotional reactions must reflect the persona's established personality, not generic consumer reactions. A skeptic should stay skeptical even when satisfied. An enthusiast should find things to love even when frustrated.
 - NPS scores must be justified by the simulation, not assigned arbitrarily. A persona who had three friction points and nearly churned should not score 9/10.
 - Deal-breakers from the persona background MUST be honored. If the background says "walks away from any subscription over $15/month," the simulation must reflect that.
