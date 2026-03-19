@@ -568,19 +568,19 @@ main() {
     done
 
     # Validate calibration path if provided (file or directory)
+    local cal_file_count=0
     if [ -n "$calibration" ]; then
         if [[ "$calibration" != /* ]]; then
             calibration="${SCRIPT_DIR}/${calibration}"
         fi
         if [ -d "$calibration" ]; then
             # Directory — check it's not empty
-            local file_count
-            file_count=$(find "$calibration" -type f \( -name "*.md" -o -name "*.csv" -o -name "*.txt" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l | tr -d ' ')
-            if [ "$file_count" -eq 0 ]; then
+            cal_file_count=$(find "$calibration" -type f \( -name "*.md" -o -name "*.csv" -o -name "*.txt" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$cal_file_count" -eq 0 ]; then
                 echo "ERROR: Calibration directory has no readable files (.md/.csv/.txt/.json/.yaml): $calibration"
                 exit 1
             fi
-            echo "Calibration: directory with ${file_count} files"
+            echo "Calibration: directory with ${cal_file_count} files"
         elif [ -f "$calibration" ]; then
             if [ ! -s "$calibration" ]; then
                 echo "ERROR: Calibration file is empty: $calibration"
@@ -629,9 +629,7 @@ main() {
             echo "Output: ${study_dir}"
             if [ -n "$calibration" ]; then
                 if [ -d "$calibration" ]; then
-                    local cal_count
-                    cal_count=$(find "$calibration" -type f \( -name "*.md" -o -name "*.csv" -o -name "*.txt" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l | tr -d ' ')
-                    echo "Calibration: $(basename "$calibration")/ (${cal_count} files)"
+                    echo "Calibration: $(basename "$calibration")/ (${cal_file_count} files)"
                 else
                     echo "Calibration: $(basename "$calibration")"
                 fi
