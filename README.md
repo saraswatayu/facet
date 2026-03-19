@@ -138,7 +138,7 @@ Free tier with core speed. AI features gated behind $30/month...
 $30/month. The fastest email experience ever made.
 ```
 
-Study types: `pricing`, `copy`, `features` (rules in `study-types/`).
+Study types: `pricing`, `copy`, `features`, `onboarding`, `retention` (rules in `study-types/`).
 
 ## Output Structure
 
@@ -226,10 +226,12 @@ study-types/
   copy.md               # simulation rules for copy exercises
   features.md           # simulation rules for feature exercises
 examples/
-  superhuman-product.md # example product config
-  superhuman-pricing.md # example pricing exercise
-  superhuman-copy.md    # example copy exercise
-  superhuman-features.md # example features exercise
+  superhuman-product.md    # example product config
+  superhuman-pricing.md    # example pricing exercise
+  superhuman-copy.md       # example copy exercise
+  superhuman-features.md   # example features exercise
+  superhuman-onboarding.md # example onboarding exercise
+  superhuman-retention.md  # example retention exercise
 research/               # ~490-source research reports informing template design
 output/                 # generated studies (gitignored)
 ```

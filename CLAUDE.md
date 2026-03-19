@@ -63,6 +63,8 @@ Each study type in `study-types/` specifies which behavioral economics framework
 | `pricing.md` | Prospect theory, mental accounting, loss aversion, flat-rate bias, zero-price effect | Signup decision, 12-month usage table, renewal, NPS, referral |
 | `copy.md` | ELM (central/peripheral routes), construal level, reactance, framing effects | Clarity, trust, motivation, shareability (0-10 each) |
 | `features.md` | Kano model (must-be/performance/attractive/indifferent), feature interaction | Per-feature importance, excitement, WTP delta, usage frequency |
+| `onboarding.md` | Endowment effect, IKEA effect, psychological ownership, status quo bias, default effect, Fogg B=MAP | Completion funnel, time-to-value, ownership score, status quo shift rate |
+| `retention.md` | Hedonic adaptation, sunk cost, peak-end rule, post-purchase rationalization, trust decay | 12-month satisfaction arc, churn taxonomy, honest vs. passive retention rate |
 
 Each study type also has outcome requirements (e.g., "at least 1 persona should churn," "features study is the weakest use case — surface reactions, not ranked lists").
 
@@ -113,11 +115,15 @@ study-types/
   pricing.md            — prospect theory, mental accounting, 12-month usage tables
   copy.md               — ELM, construal level, framing effects, per-variant scoring
   features.md           — Kano model, feature interaction, prioritization caveats
+  onboarding.md         — endowment/IKEA effect, psychological ownership, Fogg B=MAP
+  retention.md          — hedonic adaptation, sunk cost, peak-end rule, churn taxonomy
 examples/
-  superhuman-product.md — example product config (10 segments × 5 personas)
-  superhuman-pricing.md — example pricing exercise (3 tier models)
-  superhuman-copy.md    — example copy exercise (6 positioning variants)
-  superhuman-features.md — example features exercise
+  superhuman-product.md    — example product config (10 segments × 5 personas)
+  superhuman-pricing.md    — example pricing exercise (3 tier models)
+  superhuman-copy.md       — example copy exercise (6 positioning variants)
+  superhuman-features.md   — example features exercise
+  superhuman-onboarding.md — example onboarding exercise (3 flows)
+  superhuman-retention.md  — example retention exercise (3 strategies)
 research/               — ~490-source research reports informing template design
 .claude/commands/
   facet-init.md         — Claude Code skill for init pipeline
