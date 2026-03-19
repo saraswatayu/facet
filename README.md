@@ -1,6 +1,6 @@
 # Facet
 
-Generate 50+ AI personas with real behavioral psychology. Simulate them through your pricing page, your copy, your feature set. Watch them reason through the decision.
+Generate hundreds of AI personas with real behavioral psychology. Simulate them through your pricing page, your copy, your feature set. Watch them reason through the decision.
 
 The verdict isn't the point. The reasoning is.
 
