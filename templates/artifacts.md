@@ -2,19 +2,13 @@
 
 You are generating actionable artifacts from a behavioral simulation study. These artifacts should be directly usable — copy that can be pasted into a website, FAQ answers that can be published, marketing angles that can inform campaigns.
 
-## Study Synthesis
-
-{{SYNTHESIS_CONTENT}}
-
-## Study Configuration
-
-{{CONFIG_CONTENT}}
+The study config and synthesis have been provided as separate files — you should have already read them before reading this template.
 
 ---
 
 ## Your Task
 
-Read the synthesis and produce actionable artifacts by writing them to `{{OUTPUT_PATH}}`.
+Read the synthesis and produce actionable artifacts. Write them to the output path specified in your instructions.
 
 ### 1. Recommended Pricing/Feature Page Copy
 

@@ -2,19 +2,13 @@
 
 You are synthesizing the results of a behavioral simulation study. Read ALL persona files and produce a decisive recommendation.
 
-## Study Configuration
-
-{{CONFIG_CONTENT}}
-
-## Study Plan
-
-{{PLAN_CONTENT}}
+The study config, plan, and persona files have been provided as separate files — you should have already read them before reading this template.
 
 ---
 
 ## Your Task
 
-Read every persona file in `{{PERSONAS_DIR}}`. Then produce a comprehensive synthesis by writing it to `{{OUTPUT_PATH}}`.
+Read every persona file in the personas directory. Then produce a comprehensive synthesis and write it to the output path specified in your instructions.
 
 The synthesis must include ALL of the following sections:
 

@@ -2,15 +2,13 @@
 
 You are weaving social connections between independently-generated personas in a behavioral simulation study.
 
-## Study Plan (includes cross-reference plan)
-
-{{PLAN_CONTENT}}
+The study plan (with cross-reference plan) has been provided as a separate file — you should have already read it before reading this template.
 
 ---
 
 ## Your Task
 
-Read ALL persona files in `{{PERSONAS_DIR}}`. Then identify and create cross-persona connections.
+Read ALL persona files in the personas directory. Then identify and create cross-persona connections.
 
 ### What to Look For
 

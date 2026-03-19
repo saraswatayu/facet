@@ -2,25 +2,17 @@
 
 You are designing a behavioral simulation study. Your job is to create a detailed plan that ensures the study produces diverse, realistic, and insightful personas.
 
-## Study Configuration
-
-{{CONFIG_CONTENT}}
-
-## Study-Type-Specific Rules
-
-{{STUDY_TYPE_RULES}}
+The study config and study-type rules have been provided as separate files — you should have already read them before reading this template.
 
 ---
 
 ## Your Task
 
-Read the study configuration above. Then produce a comprehensive study plan by writing it to `{{OUTPUT_PATH}}`.
-
-The plan must include ALL of the following sections:
+Produce a comprehensive study plan. The plan must include ALL of the following sections:
 
 ### 1. Segment Matrix
 
-Design {{SEGMENT_COUNT}} demographic/psychographic segments relevant to this product and market.
+Design the requested number of demographic/psychographic segments relevant to this product and market.
 
 Requirements:
 - Each segment must be DISTINCT — different financial constraints, motivations, media diets, adoption patterns
@@ -40,7 +32,7 @@ Requirements:
 
 ### 2. Persona Outlines
 
-For each segment, create {{PERSONAS_PER_SEGMENT}} persona outlines.
+For each segment, create the requested number of persona outlines.
 
 Requirements for EACH persona:
 - Full name (UNIQUE across the entire study — no name reuse, no similar names)
@@ -71,7 +63,7 @@ Define the quantitative framework for the simulations:
 
 Design the social fabric of the study:
 - Which personas could realistically know each other? (same city, same profession, same community, family connections)
-- What referral chains are plausible? (e.g., tech-savvy family member → overwhelmed parent)
+- What referral chains are plausible? (e.g., tech-savvy family member -> overwhelmed parent)
 - Which segments have group dynamics that amplify or dampen adoption? (wedding groups, friend groups, workplace teams, family group chats)
 - Which personas could serve as "bridge" personas connecting two segments?
 

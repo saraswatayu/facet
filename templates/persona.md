@@ -1,45 +1,22 @@
 # Persona Generation Instructions
 
-You are generating persona {{NUMBER}} of {{TOTAL}} for a behavioral simulation study.
+You are generating a single persona for a behavioral simulation study.
 
-## Study Context
+The study config, plan (with segment matrix, persona outlines, and name registry), and study-type rules have been provided as separate files — you should have already read them before reading this template.
 
-**Product:**
-{{PRODUCT_DESCRIPTION}}
-
-**Study type:** {{STUDY_TYPE}}
-**Options being tested:**
-{{OPTIONS}}
-
-## This Persona
-
-**Segment:** {{SEGMENT_NAME}}
-**Segment description:** {{SEGMENT_DESCRIPTION}}
-**Persona outline:**
-{{PERSONA_OUTLINE}}
-
-## Name Registry — DO NOT reuse any of these names
-{{NAME_REGISTRY}}
-
-## Study-Type-Specific Simulation Rules
-{{STUDY_TYPE_RULES}}
-
-## Copy Variants to Test (if applicable)
-{{COPY_VARIANTS}}
+Find your assigned persona number in the plan's persona outlines. Generate a complete, deeply detailed persona for that outline.
 
 ---
 
-## Instructions
+## Quality Bar
 
-Generate a complete, deeply detailed persona following the structure below. This is a behavioral simulation — the persona must be specific enough to make predictions about their behavior with this product.
-
-**Quality bar:** Each persona should read like a character study in a novel, not a user research composite. The reader should feel like they know this person. Details must be specific (not "she makes a moderate salary" but "$38,500/year — $18.50/hour, the result of seven years of seniority"). Internal monologues must use the persona's actual vocabulary and thought patterns.
-
-Write the complete persona as a markdown file to: `{{OUTPUT_PATH}}`
+Each persona should read like a character study in a novel, not a user research composite. The reader should feel like they know this person. Details must be specific (not "she makes a moderate salary" but "$38,500/year — $18.50/hour, the result of seven years of seniority"). Internal monologues must use the persona's actual vocabulary and thought patterns.
 
 ---
 
-## Persona Template
+## Persona Structure
+
+Write the persona as a markdown file to the output path specified in your instructions. Follow this exact structure:
 
 ### 1. IDENTITY
 
@@ -92,9 +69,9 @@ How they find this product — be SPECIFIC about the vector:
 
 **12-Month Totals:**
 - Gross value received
-- Cost paid (fees, subscription, etc.)
-- Net value to user
-- Effective cost rate
+- Total cost to user (fees, subscription, etc.)
+- Net value to user (gross - cost)
+- Effective cost rate (cost / gross value, as percentage)
 
 **Renewal/Repurchase Decision:**
 - Internal monologue at renewal moment
@@ -116,7 +93,7 @@ After all option simulations:
 - Which option makes this persona more likely to refer others
 - One representative quote per option (something they'd actually say)
 
-### COPY VARIANT REACTIONS (only if copy variants are provided)
+### COPY VARIANT REACTIONS (only if copy variants are defined in the study config)
 
 For each copy variant:
 - Internal monologue when reading it (in character, using their vocabulary)

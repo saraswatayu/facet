@@ -5,8 +5,8 @@ set -euo pipefail
 # Usage:
 #   ./sim.sh run    --config examples/perch.md [--name perch-study] [--concurrency 5]
 #   ./sim.sh plan   --config examples/perch.md [--name perch-study]
-#   ./sim.sh generate --study output/perch-study/
-#   ./sim.sh synthesize --study output/perch-study/
+#   ./sim.sh generate --study output/perch-study/ --config examples/perch.md
+#   ./sim.sh synthesize --study output/perch-study/ --config examples/perch.md
 #   ./sim.sh status --study output/perch-study/
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -16,35 +16,36 @@ STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
 parse_frontmatter() {
     local config="$1"
     local key="$2"
-    # Extract value between --- fences
     sed -n '/^---$/,/^---$/p' "$config" | grep "^${key}:" | head -1 | sed "s/^${key}: *//" | tr -d '"'
-}
-
-# --- Parse nested YAML options into a readable list ---
-parse_options() {
-    local config="$1"
-    sed -n '/^---$/,/^---$/p' "$config" | sed -n '/^options:/,/^[a-z]/p' | grep -E '^\s+- name:|^\s+description:' | sed 's/^\s*//'
 }
 
 # --- Validate persona file ---
 validate_persona() {
     local file="$1"
-    local errors=0
-
     if [ ! -s "$file" ]; then
         echo "FAIL: Empty or missing: $file"
         return 1
     fi
-
-    # Check for required sections
+    local errors=0
     for section in "IDENTITY" "DISCOVERY" "VERDICT"; do
         if ! grep -qi "$section" "$file" 2>/dev/null; then
             echo "WARN: Missing section '$section' in $(basename "$file")"
             ((errors++)) || true
         fi
     done
-
     return $errors
+}
+
+# --- Status tracking ---
+update_status() {
+    local study_dir="$1" phase="$2" status="$3" count="${4:-}" total="${5:-}"
+    local ts
+    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    if [ -n "$count" ]; then
+        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"count\":${count},\"total\":${total},\"timestamp\":\"${ts}\"}" >> "${study_dir}/.status"
+    else
+        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"timestamp\":\"${ts}\"}" >> "${study_dir}/.status"
+    fi
 }
 
 # --- Phase 1: Plan ---
@@ -52,54 +53,48 @@ run_plan() {
     local config="$1"
     local study_dir="$2"
 
-    local segments
+    local segments per_segment study_type
     segments=$(parse_frontmatter "$config" "segments")
-    local per_segment
     per_segment=$(parse_frontmatter "$config" "personas_per_segment")
-    local study_type
     study_type=$(parse_frontmatter "$config" "study_type")
 
-    local study_type_rules=""
-    if [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
-        study_type_rules=$(cat "${SCRIPT_DIR}/study-types/${study_type}.md")
-    fi
-
-    local plan_template
-    plan_template=$(cat "${SCRIPT_DIR}/templates/plan.md")
-
-    local config_content
-    config_content=$(cat "$config")
-
-    # Substitute template variables
-    local prompt
-    prompt=$(echo "$plan_template" | \
-        sed "s|{{CONFIG_CONTENT}}|${config_content}|g" | \
-        sed "s|{{STUDY_TYPE_RULES}}|${study_type_rules}|g" | \
-        sed "s|{{SEGMENT_COUNT}}|${segments}|g" | \
-        sed "s|{{PERSONAS_PER_SEGMENT}}|${per_segment}|g" | \
-        sed "s|{{OUTPUT_PATH}}|${study_dir}/plan.md|g")
+    local study_type_rules="${SCRIPT_DIR}/study-types/${study_type}.md"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  PHASE 1: PLANNING                            ║"
-    echo "║  Segments: ${segments}, Per segment: ${per_segment}           ║"
+    echo "║  Segments: ${segments}, Per segment: ${per_segment}              ║"
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
-    FACET_PHASE="Phase 1: Planning (${segments} segments × ${per_segment} personas)" \
+    FACET_PHASE="Phase 1: Planning (${segments} segments x ${per_segment} personas)" \
     claude --print --verbose --output-format stream-json \
         --max-turns 20 \
         --allowedTools "Read,Write,Glob,Grep" \
-        -p "$prompt" 2>&1 | $STREAM_FILTER
+        -p "You are running Phase 1 (Planning) of a Facet behavioral simulation study.
 
-    # Validate plan was created
+Read these files for context:
+1. Study config: ${config}
+2. Planning template (follow these instructions): ${SCRIPT_DIR}/templates/plan.md
+3. Study type simulation rules: ${study_type_rules}
+
+Key parameters:
+- Segments to create: ${segments}
+- Personas per segment: ${per_segment}
+- Total personas: $((segments * per_segment))
+- Study type: ${study_type}
+
+Follow the instructions in the planning template exactly.
+Write the complete plan to: ${study_dir}/plan.md" \
+        2>&1 | $STREAM_FILTER
+
     if [ ! -s "${study_dir}/plan.md" ]; then
-        echo "ERROR: Plan was not generated. Check the output above."
+        echo "ERROR: Plan was not generated."
         exit 1
     fi
 
     echo ""
-    echo "✓ Plan written to ${study_dir}/plan.md"
+    echo "Plan written to ${study_dir}/plan.md"
     update_status "$study_dir" "plan" "complete"
 }
 
@@ -116,45 +111,24 @@ run_generate() {
 
     local study_type
     study_type=$(parse_frontmatter "$config" "study_type")
+    local study_type_rules="${SCRIPT_DIR}/study-types/${study_type}.md"
 
-    local study_type_rules=""
-    if [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
-        study_type_rules=$(cat "${SCRIPT_DIR}/study-types/${study_type}.md")
-    fi
-
-    local persona_template
-    persona_template=$(cat "${SCRIPT_DIR}/templates/persona.md")
-
-    local config_content
-    config_content=$(cat "$config")
-
-    local plan_content
-    plan_content=$(cat "${study_dir}/plan.md")
-
-    # Count total personas from plan
-    local total
-    total=$(grep -c "^- Full name:" "${study_dir}/plan.md" 2>/dev/null || echo "0")
-    if [ "$total" -eq 0 ]; then
-        # Fallback: calculate from config
-        local segments
-        segments=$(parse_frontmatter "$config" "segments")
-        local per_segment
-        per_segment=$(parse_frontmatter "$config" "personas_per_segment")
-        total=$((segments * per_segment))
-    fi
+    # Count total personas from config
+    local segments per_segment total
+    segments=$(parse_frontmatter "$config" "segments")
+    per_segment=$(parse_frontmatter "$config" "personas_per_segment")
+    total=$((segments * per_segment))
 
     mkdir -p "${study_dir}/personas"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  PHASE 2: GENERATING PERSONAS                 ║"
-    echo "║  Total: ${total}, Concurrency: ${concurrency}                  ║"
+    echo "║  Total: ${total}, Concurrency: ${concurrency}                    ║"
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
     local running=0
-    local completed=0
-    local failed=0
 
     for i in $(seq 1 "$total"); do
         local padded
@@ -164,32 +138,8 @@ run_generate() {
         # Skip if already generated
         if [ -s "$output_path" ]; then
             echo "  skip: persona-${padded}.md (already exists)"
-            ((completed++)) || true
             continue
         fi
-
-        # Build per-persona prompt
-        local prompt
-        prompt=$(echo "$persona_template" | \
-            sed "s|{{NUMBER}}|${i}|g" | \
-            sed "s|{{TOTAL}}|${total}|g" | \
-            sed "s|{{STUDY_TYPE}}|${study_type}|g" | \
-            sed "s|{{OUTPUT_PATH}}|${output_path}|g" | \
-            sed "s|{{STUDY_TYPE_RULES}}|See the study type rules provided in context.|g")
-
-        # Prepend config and plan as context
-        prompt="## Study Configuration
-${config_content}
-
-## Study Plan (includes segment matrix, persona outlines, name registry)
-${plan_content}
-
-## Study Type Rules
-${study_type_rules}
-
----
-
-${prompt}"
 
         # Launch in background
         (
@@ -197,13 +147,24 @@ ${prompt}"
             claude --print --output-format stream-json \
                 --max-turns 15 \
                 --allowedTools "Read,Write" \
-                -p "$prompt" 2>&1 | $STREAM_FILTER
+                -p "You are generating persona ${i} of ${total} for a behavioral simulation study.
 
-            # Validate
+Read these files for context:
+1. Study config: ${config}
+2. Study plan (segment matrix, persona outlines, name registry): ${study_dir}/plan.md
+3. Persona template (follow these instructions): ${SCRIPT_DIR}/templates/persona.md
+4. Study type simulation rules: ${study_type_rules}
+
+You are generating persona number ${i} (persona-${padded}).
+Find persona #${i} in the plan's persona outlines and generate a full persona for that outline.
+
+Write the complete persona to: ${output_path}" \
+                2>&1 | $STREAM_FILTER
+
             if validate_persona "$output_path" 2>/dev/null; then
-                echo "  ✓ persona-${padded}.md"
+                echo "  done: persona-${padded}.md"
             else
-                echo "  ✗ persona-${padded}.md (validation issues)"
+                echo "  WARN: persona-${padded}.md (validation issues)"
             fi
         ) &
 
@@ -216,18 +177,17 @@ ${prompt}"
         fi
     done
 
-    # Wait for all remaining jobs
     wait
 
-    # Count results
+    local completed
     completed=$(find "${study_dir}/personas" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
-    failed=$((total - completed))
+    local failed=$((total - completed))
 
     echo ""
     echo "Generation complete: ${completed}/${total} personas (${failed} failed)"
 
     if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -gt 20 ]; then
-        echo "WARNING: >20% failure rate. Consider re-running failed personas."
+        echo "WARNING: >20% failure rate. Consider re-running."
     fi
 
     update_status "$study_dir" "generate" "complete" "$completed" "$total"
@@ -237,17 +197,6 @@ ${prompt}"
 run_weave() {
     local config="$1"
     local study_dir="$2"
-
-    local weave_template
-    weave_template=$(cat "${SCRIPT_DIR}/templates/weave.md")
-
-    local plan_content
-    plan_content=$(cat "${study_dir}/plan.md")
-
-    local prompt
-    prompt=$(echo "$weave_template" | \
-        sed "s|{{PLAN_CONTENT}}|${plan_content}|g" | \
-        sed "s|{{PERSONAS_DIR}}|${study_dir}/personas|g")
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -259,7 +208,17 @@ run_weave() {
     claude --print --verbose --output-format stream-json \
         --max-turns 75 \
         --allowedTools "Read,Write,Edit,Glob,Grep" \
-        -p "$prompt" 2>&1 | $STREAM_FILTER
+        -p "You are running Phase 3 (Weaving) of a Facet behavioral simulation study.
+
+Read these files for context:
+1. Study plan (includes cross-reference plan): ${study_dir}/plan.md
+2. Weaving instructions: ${SCRIPT_DIR}/templates/weave.md
+
+Then read ALL persona files in: ${study_dir}/personas/
+
+Follow the weaving instructions to add cross-persona connections, referral chains,
+and social links between personas. Use the Edit tool to update existing persona files." \
+        2>&1 | $STREAM_FILTER
 
     update_status "$study_dir" "weave" "complete"
 }
@@ -268,22 +227,6 @@ run_weave() {
 run_synthesize() {
     local config="$1"
     local study_dir="$2"
-
-    local synth_template
-    synth_template=$(cat "${SCRIPT_DIR}/templates/synthesis.md")
-
-    local config_content
-    config_content=$(cat "$config")
-
-    local plan_content
-    plan_content=$(cat "${study_dir}/plan.md")
-
-    local prompt
-    prompt=$(echo "$synth_template" | \
-        sed "s|{{CONFIG_CONTENT}}|${config_content}|g" | \
-        sed "s|{{PLAN_CONTENT}}|${plan_content}|g" | \
-        sed "s|{{PERSONAS_DIR}}|${study_dir}/personas|g" | \
-        sed "s|{{OUTPUT_PATH}}|${study_dir}/synthesis.md|g")
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -295,7 +238,23 @@ run_synthesize() {
     claude --print --verbose --output-format stream-json \
         --max-turns 50 \
         --allowedTools "Read,Write,Glob,Grep" \
-        -p "$prompt" 2>&1 | $STREAM_FILTER
+        -p "You are running Phase 4 (Synthesis) of a Facet behavioral simulation study.
+
+Read these files for context:
+1. Study config: ${config}
+2. Study plan: ${study_dir}/plan.md
+3. Synthesis instructions: ${SCRIPT_DIR}/templates/synthesis.md
+
+Then read ALL persona files in: ${study_dir}/personas/
+
+Follow the synthesis instructions to produce a comprehensive analysis.
+Write the synthesis to: ${study_dir}/synthesis.md" \
+        2>&1 | $STREAM_FILTER
+
+    if [ ! -s "${study_dir}/synthesis.md" ]; then
+        echo "ERROR: Synthesis was not generated."
+        exit 1
+    fi
 
     update_status "$study_dir" "synthesize" "complete"
 }
@@ -304,21 +263,6 @@ run_synthesize() {
 run_artifacts() {
     local config="$1"
     local study_dir="$2"
-
-    local art_template
-    art_template=$(cat "${SCRIPT_DIR}/templates/artifacts.md")
-
-    local config_content
-    config_content=$(cat "$config")
-
-    local synth_content
-    synth_content=$(cat "${study_dir}/synthesis.md")
-
-    local prompt
-    prompt=$(echo "$art_template" | \
-        sed "s|{{CONFIG_CONTENT}}|${config_content}|g" | \
-        sed "s|{{SYNTHESIS_CONTENT}}|${synth_content}|g" | \
-        sed "s|{{OUTPUT_PATH}}|${study_dir}/artifacts.md|g")
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -330,7 +274,16 @@ run_artifacts() {
     claude --print --verbose --output-format stream-json \
         --max-turns 20 \
         --allowedTools "Read,Write,Glob,Grep" \
-        -p "$prompt" 2>&1 | $STREAM_FILTER
+        -p "You are running Phase 5 (Artifacts) of a Facet behavioral simulation study.
+
+Read these files for context:
+1. Study config: ${config}
+2. Synthesis: ${study_dir}/synthesis.md
+3. Artifacts instructions: ${SCRIPT_DIR}/templates/artifacts.md
+
+Follow the artifacts instructions to generate actionable deliverables.
+Write the artifacts to: ${study_dir}/artifacts.md" \
+        2>&1 | $STREAM_FILTER
 
     update_status "$study_dir" "artifacts" "complete"
 }
@@ -338,17 +291,6 @@ run_artifacts() {
 # --- Phase 6: Adversarial ---
 run_adversarial() {
     local study_dir="$1"
-
-    local adv_template
-    adv_template=$(cat "${SCRIPT_DIR}/templates/adversarial.md")
-
-    local synth_content
-    synth_content=$(cat "${study_dir}/synthesis.md")
-
-    local prompt
-    prompt=$(echo "$adv_template" | \
-        sed "s|{{SYNTHESIS_CONTENT}}|${synth_content}|g" | \
-        sed "s|{{OUTPUT_PATH}}|${study_dir}/counterargument.md|g")
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -360,30 +302,24 @@ run_adversarial() {
     claude --print --verbose --output-format stream-json \
         --max-turns 20 \
         --allowedTools "Read,Write,Glob,Grep" \
-        -p "$prompt" 2>&1 | $STREAM_FILTER
+        -p "You are running Phase 6 (Adversarial Review) of a Facet behavioral simulation study.
+
+Read these files for context:
+1. Synthesis: ${study_dir}/synthesis.md
+2. Adversarial instructions: ${SCRIPT_DIR}/templates/adversarial.md
+
+IMPORTANT: Do NOT read the individual persona files. Your counterargument should
+challenge the synthesis on its own terms, without being anchored by the persona details.
+
+Follow the adversarial instructions to build the strongest possible case AGAINST
+the synthesis recommendation.
+Write the counterargument to: ${study_dir}/counterargument.md" \
+        2>&1 | $STREAM_FILTER
 
     update_status "$study_dir" "adversarial" "complete"
 }
 
-# --- Status tracking ---
-update_status() {
-    local study_dir="$1"
-    local phase="$2"
-    local status="$3"
-    local count="${4:-}"
-    local total="${5:-}"
-
-    local status_file="${study_dir}/.status"
-    local ts
-    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-    if [ -n "$count" ]; then
-        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"count\":${count},\"total\":${total},\"timestamp\":\"${ts}\"}" >> "$status_file"
-    else
-        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"timestamp\":\"${ts}\"}" >> "$status_file"
-    fi
-}
-
+# --- Show status ---
 show_status() {
     local study_dir="$1"
     local status_file="${study_dir}/.status"
@@ -395,7 +331,7 @@ show_status() {
 
     echo ""
     echo "Study: $(basename "$study_dir")"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "---"
 
     local persona_count
     persona_count=$(find "${study_dir}/personas" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
@@ -415,9 +351,11 @@ show_status() {
     echo "Output files:"
     for f in plan.md synthesis.md artifacts.md counterargument.md; do
         if [ -f "${study_dir}/$f" ]; then
-            echo "  ✓ $f"
+            local lines
+            lines=$(wc -l < "${study_dir}/$f" | tr -d ' ')
+            echo "  + $f (${lines} lines)"
         else
-            echo "  ✗ $f"
+            echo "  - $f"
         fi
     done
 }
@@ -427,12 +365,8 @@ main() {
     local cmd="${1:-help}"
     shift || true
 
-    local config=""
-    local study_dir=""
-    local study_name=""
-    local concurrency="5"
+    local config="" study_dir="" study_name="" concurrency="5"
 
-    # Parse arguments
     while [ $# -gt 0 ]; do
         case "$1" in
             --config) config="$2"; shift 2 ;;
@@ -442,6 +376,11 @@ main() {
             *) echo "Unknown argument: $1"; exit 1 ;;
         esac
     done
+
+    # Resolve config to absolute path
+    if [ -n "$config" ] && [[ "$config" != /* ]]; then
+        config="${SCRIPT_DIR}/${config}"
+    fi
 
     # Derive study_dir from config if not provided
     if [ -z "$study_dir" ] && [ -n "$config" ]; then
@@ -456,11 +395,10 @@ main() {
             [ -z "$config" ] && { echo "Usage: ./sim.sh run --config <file>"; exit 1; }
             mkdir -p "${study_dir}/personas"
             echo ""
-            echo "╔═══════════════════════════════════════════════╗"
-            echo "║           FACET SIMULATION ENGINE              ║"
-            echo "║  Config: $(basename "$config")"
-            echo "║  Output: ${study_dir}"
-            echo "╚═══════════════════════════════════════════════╝"
+            echo "FACET SIMULATION ENGINE"
+            echo "Config: $(basename "$config")"
+            echo "Output: ${study_dir}"
+            echo ""
             run_plan "$config" "$study_dir"
             run_generate "$config" "$study_dir" "$concurrency"
             run_weave "$config" "$study_dir"
@@ -468,10 +406,8 @@ main() {
             run_artifacts "$config" "$study_dir"
             run_adversarial "$study_dir"
             echo ""
-            echo "╔═══════════════════════════════════════════════╗"
-            echo "║  STUDY COMPLETE                                ║"
-            echo "║  Output: ${study_dir}/                         ║"
-            echo "╚═══════════════════════════════════════════════╝"
+            echo "STUDY COMPLETE"
+            echo "Output: ${study_dir}/"
             ;;
         plan)
             [ -z "$config" ] && { echo "Usage: ./sim.sh plan --config <file>"; exit 1; }
