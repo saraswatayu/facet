@@ -1,67 +1,49 @@
-# Facet — AI Agent Skills Repository
+# Facet — Pre-Launch Simulation Engine
 
-Multi-agent skill distribution hub. Stripe integration guidance (best practices + upgrade paths) served to 25+ coding agent platforms via symlinks from a single source of truth.
+A CLI tool that generates detailed narrative personas and simulates them through product decisions (pricing, copy, features). Produces synthesis with decisive recommendations and actionable artifacts.
 
-## Project Structure
+## Architecture
+
+6-phase pipeline, each phase is a `claude` CLI invocation:
 
 ```
-.agents/skills/                    # Source of truth for all skills
-├── stripe-best-practices/
-│   ├── SKILL.md                   # Integration routing (Checkout, Connect, Billing, Treasury)
-│   └── references/                # Domain-specific guides
-│       ├── payments.md
-│       ├── billing.md
-│       ├── connect.md
-│       └── treasury.md
-└── upgrade-stripe/
-    └── SKILL.md                   # API version + SDK upgrade guide
-
-skills/                            # Public exports (symlinks → .agents/skills/)
-.claude/skills/                    # Agent-specific symlinks (one per platform)
-.continue/skills/                  #   all point to ../../.agents/skills/*
-.windsurf/skills/                  #   ... 25+ agent directories total
-skills-lock.json                   # Version tracking (source, hash, integrity)
+Config → Plan → Generate (parallel) → Weave → Synthesize → Artifacts → Adversarial
 ```
 
-## Critical Rules
+- **Plan**: Generates segment matrix, persona outlines, name registry, simulation parameters
+- **Generate**: One `claude` call per persona, parallel (configurable concurrency). Each persona gets fresh context with the template + plan
+- **Weave**: Single call reads all personas, adds cross-references and referral chains
+- **Synthesize**: Single call reads all personas, produces segment-level analysis and recommendation
+- **Artifacts**: Single call generates usable output (copy, FAQ, CTA, segment angles)
+- **Adversarial**: Fresh context argues against the synthesis recommendation
 
-1. **`.agents/skills/` is the single source of truth** — never create or edit skill content in agent-specific directories. Those are symlinks.
-2. **Never break symlinks** — every agent dir (`.claude/`, `.continue/`, `.windsurf/`, etc.) symlinks to `.agents/skills/`. If you rename or move a skill, update all symlinks.
-3. **SKILL.md frontmatter is the contract** — `name`, `description`, and optional `alwaysApply` in YAML frontmatter. Agents parse this to decide when to activate a skill.
-4. **Reference files are linked from SKILL.md** — don't add reference files without linking them from the parent SKILL.md routing table.
-5. **`skills-lock.json` tracks provenance** — skills are sourced from `stripe/ai` on GitHub. Don't manually edit hashes; they're computed for integrity verification.
-6. **Latest Stripe API version: `2026-02-25.clover`** — keep this in sync across both SKILL.md files when it changes.
-7. **Commit after every logical change** — format: `<type>: <description>` (e.g., `update: stripe API version to 2026-02-25.clover`)
+## Key Files
 
-## Skill Authoring
+- `sim.sh` — Main orchestrator. Subcommands: `run`, `plan`, `generate`, `synthesize`, `status`
+- `stream_filter.py` — Parses `--output-format stream-json` for real-time progress display
+- `templates/` — Prompt templates for each phase
+- `study-types/` — Simulation rules per study type (pricing, copy, features)
+- `examples/` — Example study configs
+- `output/` — Generated studies (gitignored)
 
-| Element | Format | Example |
-|---------|--------|---------|
-| Frontmatter | YAML between `---` fences | `name: my-skill` |
-| Routing table | Markdown table with "Building..." / "Recommended API" / "Details" columns | See `stripe-best-practices/SKILL.md` |
-| References | Markdown files in `references/` subdirectory | `references/payments.md` |
-| Links to docs | Relative paths from SKILL.md | `[references/payments.md](references/payments.md)` |
+## Config Format
 
-## Adding a New Skill
+Markdown with YAML frontmatter. Frontmatter has structured params (study_type, segments, personas_per_segment, options). Markdown body has product description, target market, options detail, optional copy variants.
 
-1. Create `.agents/skills/<skill-name>/SKILL.md` with YAML frontmatter
-2. Add optional `references/` subdirectory for domain-specific guides
-3. Create symlinks in every agent directory: `.{agent}/skills/<skill-name> → ../../.agents/skills/<skill-name>`
-4. Create public symlink: `skills/<skill-name> → ../.agents/skills/<skill-name>`
-5. Update `skills-lock.json` with source and hash
+## CLI Pattern
 
-## Common Gotchas
+```bash
+claude --print --verbose --output-format stream-json \
+  --max-turns $MAX_TURNS \
+  --allowedTools "Read,Write,Glob,Grep" \
+  -p "$PROMPT" 2>&1 | python3 -u stream_filter.py
+```
 
-| Gotcha | Fix |
-|--------|-----|
-| Editing a file in `.claude/skills/` directly | You're editing via symlink — changes propagate to all agents. This is fine, but know that's what's happening. |
-| Broken symlink after moving a skill | Re-create symlinks in all 25+ agent dirs. Check with `find . -type l ! -exec test -e {} \; -print` |
-| Forgetting to update both SKILL.md files when API version changes | Grep for the old version string across all `.md` files |
-| Adding a reference file but not linking it | Agents won't discover it — always add a row to the routing table in SKILL.md |
+Tools restricted to Read, Write, Glob, Grep. No Bash (no escape hatch). Max-turns generous per phase: Plan 20, Generate 15, Weave 75, Synthesize 50, Artifacts 20, Adversarial 20.
 
-## When NOT to Do Things
+## Conventions
 
-- **Don't duplicate skill content** across agent directories — that defeats the symlink architecture
-- **Don't add agent-specific logic** to SKILL.md files — skills must be platform-agnostic
-- **Don't delete agent directories** you don't recognize — they serve other coding assistants
-- **Don't manually edit `computedHash`** in skills-lock.json — it's for integrity verification
+- Personas are markdown files in `output/{study}/personas/`
+- All numbers in personas must be specific and internally consistent
+- Names must be unique across the entire study (enforced by plan.md name registry)
+- Template sections adapt to product domain (not hardcoded to travel/flights)
