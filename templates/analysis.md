@@ -1,6 +1,6 @@
 # Unified Analysis Instructions
 
-You are producing the complete analysis for a behavioral simulation exercise. This combines synthesis, actionable artifacts, and adversarial review into a single output.
+You are producing the complete analysis for a behavioral simulation exercise. This combines synthesis, actionable artifacts, and adversarial review — written to TWO separate output files.
 
 In Facet v2, persona backgrounds and simulations are in separate files. The persona backgrounds live in the personas directory (identity, psychology, domain profile, discovery). The simulations live in the simulations directory (option-by-option behavioral modeling, verdicts, copy variant reactions). You need BOTH to produce this analysis.
 
@@ -10,17 +10,24 @@ The exercise config, all persona background files, and all simulation files have
 
 ## Your Task
 
-Read every persona background file and every simulation file for this exercise. Then produce a single analysis document containing all three parts below. Write it to the output path specified in your instructions.
+Read every persona background file and every simulation file for this exercise. Then produce TWO output documents:
 
-Use the section markers exactly as shown — these are structural dividers that downstream tooling depends on.
+1. **synthesis.md** — Parts 1 + 3 below (the DECISION document: analysis, recommendation, and counterargument)
+2. **artifacts.md** — Part 2 below (the ACTION document: usable copy, FAQ, marketing angles, validation plan)
+
+Write each to the output paths specified in your instructions.
 
 ---
 
-# PART 1: SYNTHESIS
+# PART 1: SYNTHESIS (write to synthesis.md)
 
-Lead with the verdict. Not "the results are mixed" — a clear recommendation with the margin.
+Begin the synthesis with this disclosure header:
+
+> **Disclosure**: This analysis was produced using AI-simulated personas. Results represent directional hypotheses for validation with real users, not confirmed research findings. Confidence levels are noted per finding.
 
 ## 1. Executive Summary (3-5 paragraphs)
+
+Lead with the verdict. Not "the results are mixed" — a clear recommendation with the margin.
 
 Name the winning option, the vote count, and the 2-3 forces that drive the result. Name specific personas that embody the most important dynamics. Reference both their backgrounds and their simulation outcomes — the power of this analysis comes from connecting who people ARE to what they DID.
 
@@ -32,6 +39,10 @@ For each force driving the result, explain:
 - What the force is (e.g., "the zero-price gateway")
 - Why it matters (the mechanism, not just the correlation)
 - Which personas demonstrate it most clearly (name them, quote from their simulations)
+- **Confidence**: HIGH / MODERATE / LOW
+  - HIGH: Strong cross-segment agreement, consistent with behavioral economics mechanisms, finding would survive adversarial review
+  - MODERATE: Majority agreement with notable dissent, or relies on well-represented demographics
+  - LOW: Split signals, relies on underrepresented demographics, or single-segment finding
 
 ## 3. Where Each Option Wins
 
@@ -39,7 +50,12 @@ For each option, map:
 - Which segments favor it (with vote counts)
 - The pattern connecting those segments (what do they share?)
 - Why this constituency is smaller/larger than the alternative
-- The referral dynamics within these segments (do winners refer more? do their stories travel better?)
+- The referral dynamics within these segments (do winners refer more? do their stories travel better? compare Travelability Scores)
+
+When personas within a segment disagree:
+- Report the split ratio explicitly (e.g., "3 of 5 personas in this segment preferred Option A")
+- Identify the differentiating factor (what distinguishes the dissenters?)
+- Do NOT average conflicting signals. Conflicting signals are a finding, not noise.
 
 ## 4. Crossover Analysis
 
@@ -48,11 +64,23 @@ If applicable:
 - How many personas fall above vs. below this threshold?
 - What predicts which side a persona falls on? (Look for it in the backgrounds — income, usage patterns, psychology)
 
+## 4b. Behavioral Mechanism Analysis
+
+For each major finding, identify the behavioral economics mechanism driving it:
+- Not just "Segment X preferred Option A" but "Segment X preferred Option A primarily due to [loss aversion around current solution / zero price effect / subscription fatigue / status quo bias], with [social proof / anchoring] as secondary drivers."
+- Note which findings are robust across different behavioral assumptions and which depend on a single mechanism.
+
+## 4c. Stated vs. Revealed Preference Gap
+
+Compare what personas SAY they'd do (stated preference from internal monologues and verdicts) vs. what their behavioral economics profile PREDICTS they'd actually do (revealed preference based on their reference points, loss aversion, status quo bias, and subscription fatigue).
+
+Flag cases where stated and revealed preferences diverge — these are the highest-value insights. A persona who says "I'd definitely switch" but has strong status quo bias and 5 existing subscriptions is likely overstating their intent.
+
 ## 5. Segment Summary Table
 
-| Segment | Option A | Option B | Split | Key Insight |
-|---------|----------|----------|-------|-------------|
-| ... | ... | ... | ... | ... |
+| Segment | Option A | Option B | Split | Confidence | Key Insight |
+|---------|----------|----------|-------|------------|-------------|
+| ... | ... | ... | ... | ... | ... |
 
 Note any segments that go unanimously for one option — these are the strongest signals.
 
@@ -95,6 +123,15 @@ Include: conversion rate, revenue per 1K visitors, per-user revenue at different
 
 What's the one risk of the recommended option? What mitigation does the exercise suggest? Name the persona(s) who most clearly illustrate the risk.
 
+## 10b. Simulation Integrity Audit
+
+Before finalizing the synthesis, check for known simulation biases:
+- **Sycophancy check**: If >70% of personas are positive about any option, flag as potentially sycophantic. Real studies rarely show 70%+ enthusiasm.
+- **Variance check**: If NPS standard deviation < 1.5, flag as potentially compressed. Real user NPS distributions are wide.
+- **Missing negatives**: Did any persona express genuine confusion, frustration, or indifference? If none did, note this as a simulation limitation.
+- **Deal-breaker enforcement**: Were persona deal-breakers (from backgrounds) honored in simulations? Flag any violations.
+- **Underrepresented population warnings**: If findings depend on personas from demographics known to be poorly represented in LLM training data (rural, low-income, non-Western, elderly, non-English-first-language), flag: "This finding relies on personas from underrepresented demographics. Prioritize real-user validation for this segment."
+
 ## 11. Implementation Recommendations
 
 Based on the exercise findings, what should the company do? Be specific:
@@ -104,7 +141,14 @@ Based on the exercise findings, what should the company do? Be specific:
 - Referral mechanics to build (based on actual referral stories from simulations)
 - What to monitor post-launch (metrics that would confirm or invalidate the recommendation)
 
-## 12. Appendix: Full Persona Results Table
+## 12. Known Limitations
+
+Specific to this study type:
+- **Pricing studies**: "Directional signals, not precise WTP. LLMs systematically underestimate price sensitivity for low-income segments."
+- **Copy studies**: "Attitudinal responses only. Real click-through rates may differ significantly."
+- **Feature studies**: "Synthetic users tend to rate all features as important. Priority rankings have low reliability."
+
+## 13. Appendix: Full Persona Results Table
 
 | ID | Name | Segment | Preference | NPS (Opt A) | NPS (Opt B) | Net Value (Opt A) | Net Value (Opt B) | Top Copy Variant |
 |----|------|---------|------------|-------------|-------------|--------------------|--------------------|-----------------|
@@ -112,7 +156,7 @@ Based on the exercise findings, what should the company do? Be specific:
 
 ---
 
-# PART 2: ARTIFACTS
+# PART 2: ARTIFACTS (write to artifacts.md)
 
 These artifacts should be directly usable — copy that can be pasted into a website, FAQ answers that can be published, marketing angles that can inform campaigns. Every artifact must be grounded in specific persona data from the exercise, not generic best practices.
 
@@ -164,11 +208,23 @@ For the top 5 objections identified across all simulations:
 - **The response that works** (based on what convinced hesitant personas in their simulations)
 - **The proof point** (specific persona data that supports the response)
 
+## 6. Recommended Validation Plan
+
+For each key finding from the synthesis, provide:
+- **Hypothesis**: The specific claim from the simulation
+- **Test with**: Which real user segment to recruit (5-8 people)
+- **Method**: User interview, A/B test, or survey question
+- **Confirms if**: What result validates the simulation
+- **Invalidates if**: What result contradicts the simulation
+- **Priority**: High (launch-blocking) / Medium (informative) / Low (nice-to-know)
+
 ---
 
-# PART 3: COUNTERARGUMENT
+# PART 3: COUNTERARGUMENT (write to synthesis.md, after Part 1)
 
 You are now a devil's advocate. Construct the strongest possible case AGAINST the recommendation from Part 1. You are NOT trying to be balanced. You are trying to BREAK the recommendation. If it survives, it's stronger. If it doesn't, better to know now.
+
+**Important**: Base your counterargument on the synthesis and persona data ONLY. Do not reference the original product description or exercise config framing — argue against the recommendation on its own terms.
 
 ## 1. The Counterargument (2-3 paragraphs)
 
@@ -199,20 +255,36 @@ Name 3-5 types of users that the exercise doesn't include but should:
 - Which option they'd likely prefer
 - How their inclusion might change the verdict
 
-## 5. The Scenario Where the Other Option Wins
+## 5. Pre-Mortem
 
-Describe a realistic scenario where the recommendation is wrong:
-- What market conditions would need to be true?
-- What user behavior would need to differ from the simulation?
-- What competitive dynamics could change the calculus?
+Imagine the recommended option was implemented and failed spectacularly 6 months later. Write a specific, plausible failure narrative:
+- What went wrong?
+- Which assumption proved false?
+- Which persona segment behaved differently than simulated?
+- What competitor move or market shift invalidated the recommendation?
 
-## 6. What Additional Data Would Increase Confidence?
+This must be a concrete story, not a list of abstract risks.
+
+## 6. LLM Bias Audit
+
+Check specifically for known simulation biases:
+- Which personas seem unrealistically positive? (sycophancy)
+- Are persona reactions clustered too tightly around the average? (variance compression)
+- Do all personas reason like educated, urban, progressive individuals? (WEIRD bias)
+- Are behavioral biases (loss aversion, anchoring, status quo bias) applied consistently with each persona's stated parameters from their backgrounds?
+- Does the simulation miss DIY/workaround solutions real users would have found?
+
+## 7. The Alternative
+
+Propose a specific alternative strategy — not just "the other option" but a different approach entirely. This could include a hybrid of tested options, a phased rollout, a different segment targeting order, or an approach not tested. Support it with specific persona evidence from the study.
+
+## 8. What Additional Data Would Increase Confidence?
 
 List 3-5 pieces of real-world data that would either strengthen or weaken the recommendation:
 - What to measure
 - How to measure it
 - What result would confirm the recommendation vs. invalidate it
 
-## 7. Verdict on Recommendation Strength
+## 9. Verdict on Recommendation Strength
 
 After all of the above: does the recommendation survive your attack? Rate your confidence that the recommendation is correct on a scale of 1-10, and explain why. Be honest — if the recommendation is solid despite your attacks, say so. If you found a genuine crack, say that too.
