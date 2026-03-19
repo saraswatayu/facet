@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Facet setup — verify dependencies and print quickstart
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PASS="[ok]"
+FAIL="[MISSING]"
+errors=0
+
+echo ""
+echo "Facet — Pre-Launch Simulation Engine"
+echo "====================================="
+echo ""
+
+# Check claude CLI
+if command -v claude &>/dev/null; then
+    version=$(claude --version 2>/dev/null | head -1 || echo "unknown")
+    echo "  $PASS claude CLI ($version)"
+else
+    echo "  $FAIL claude CLI — install: https://docs.anthropic.com/en/docs/claude-cli"
+    ((errors++))
+fi
+
+# Check python3
+if command -v python3 &>/dev/null; then
+    version=$(python3 --version 2>/dev/null | head -1 || echo "unknown")
+    echo "  $PASS python3 ($version)"
+else
+    echo "  $FAIL python3 — required for stream_filter.py"
+    ((errors++))
+fi
+
+# Check bash
+if command -v bash &>/dev/null; then
+    version=$(bash --version 2>/dev/null | head -1 | sed 's/GNU bash, version //' | cut -d'(' -f1 || echo "unknown")
+    echo "  $PASS bash ($version)"
+else
+    echo "  $FAIL bash"
+    ((errors++))
+fi
+
+# Check file integrity
+echo ""
+template_count=$(find "$SCRIPT_DIR/templates" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+studytype_count=$(find "$SCRIPT_DIR/study-types" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+example_count=$(find "$SCRIPT_DIR/examples" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$template_count" -ge 4 ]; then
+    echo "  $PASS templates/ ($template_count files)"
+else
+    echo "  $FAIL templates/ — expected 4+ files, found $template_count"
+    ((errors++))
+fi
+
+if [ "$studytype_count" -ge 3 ]; then
+    echo "  $PASS study-types/ ($studytype_count files)"
+else
+    echo "  $FAIL study-types/ — expected 3+ files, found $studytype_count"
+    ((errors++))
+fi
+
+if [ "$example_count" -ge 2 ]; then
+    echo "  $PASS examples/ ($example_count files)"
+else
+    echo "  $FAIL examples/ — expected 2+ files, found $example_count"
+    ((errors++))
+fi
+
+if [ -f "$SCRIPT_DIR/sim.sh" ]; then
+    echo "  $PASS sim.sh"
+else
+    echo "  $FAIL sim.sh — main orchestrator missing"
+    ((errors++))
+fi
+
+if [ -f "$SCRIPT_DIR/stream_filter.py" ]; then
+    echo "  $PASS stream_filter.py"
+else
+    echo "  $FAIL stream_filter.py — progress display missing"
+    ((errors++))
+fi
+
+echo ""
+
+if [ "$errors" -gt 0 ]; then
+    echo "  $errors issue(s) found. Fix the above before running Facet."
+    echo ""
+    exit 1
+fi
+
+echo "  Ready to go."
+echo ""
+echo "  Quickstart:"
+echo "    ./sim.sh init --config examples/superhuman-product.md --name my-study"
+echo "    ./sim.sh exercise --study output/my-study/ --config examples/superhuman-pricing.md"
+echo "    ./sim.sh status --study output/my-study/"
+echo ""
