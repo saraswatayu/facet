@@ -33,7 +33,7 @@ The accuracy hierarchy is clear:
 
 | Approach | Accuracy | Example |
 |----------|----------|---------|
-| Interview-grounded agents | ~85% | Simile ($100M Series A) |
+| Interview-grounded agents | ~85% | Stanford, 2024 (founding team of Simile) |
 | Fine-tuned on survey data | ~78-88% | Qualtrics Edge Audiences |
 | Census-calibrated panels | ~75-92% | Ditto, Toluna |
 | **Facet + your data** | **~78-85%** | **`--calibration` with internal research** |
