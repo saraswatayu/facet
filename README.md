@@ -48,6 +48,14 @@ Built on the Claude CLI. No UI, no framework — just bash, prompt templates, an
 - `synthesis.md` — confidence-graded findings, behavioral mechanism analysis, stated vs. revealed preference gaps, sycophancy audit, pre-mortem, counterargument with LLM bias audit
 - `artifacts.md` — actionable deliverables (pricing tables, copy recommendations, feature priorities) + validation plan
 
+## Install
+
+```bash
+git clone https://github.com/saraswatayu/facet.git
+cd facet
+./setup
+```
+
 ## Quick Start
 
 ```bash
@@ -270,3 +278,5 @@ Facet is *not* different in that it's still prompt engineering on a general-purp
 - [Claude CLI](https://docs.anthropic.com/en/docs/claude-cli) (`claude` command available)
 - Python 3 (for `stream_filter.py`)
 - Bash
+
+Run `./setup` to verify all dependencies.
