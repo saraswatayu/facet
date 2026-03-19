@@ -346,27 +346,27 @@ run_simulate() {
     local running=0
 
     for persona_file in "${study_dir}/personas"/persona-*.md; do
-        local basename
-        basename=$(basename "$persona_file" .md)
-        local padded="${basename#persona-}"
-        local output_path="${exercise_dir}/simulations/${basename}.md"
+        local base_name
+        base_name=$(basename "$persona_file" .md)
+        local padded="${base_name#persona-}"
+        local output_path="${exercise_dir}/simulations/${base_name}.md"
 
         # Skip if already generated
         if [ -s "$output_path" ]; then
-            echo "  skip: ${basename}.md (already exists)"
+            echo "  skip: ${base_name}.md (already exists)"
             continue
         fi
 
-        local log_file="${exercise_dir}/logs/${basename}.log"
+        local log_file="${exercise_dir}/logs/${base_name}.log"
 
         # Launch in background
         (
-            FACET_PHASE="Simulation: ${basename}" \
+            FACET_PHASE="Simulation: ${base_name}" \
             claude --print --verbose --output-format stream-json \
                 --max-turns 15 \
                 --model sonnet \
                 --allowedTools "Read,Write" \
-                -p "You are simulating persona ${basename} through an exercise for a behavioral simulation study.
+                -p "You are simulating persona ${base_name} through an exercise for a behavioral simulation study.
 
 Read these files for context:
 1. Persona background: ${persona_file}
@@ -381,9 +381,9 @@ Write the simulation to: ${output_path}" \
                 2>&1 | tee "$log_file" | $STREAM_FILTER
 
             if [ -s "$output_path" ]; then
-                echo "  done: ${basename}.md"
+                echo "  done: ${base_name}.md"
             else
-                echo "  WARN: ${basename}.md (empty or missing, see ${log_file})"
+                echo "  WARN: ${base_name}.md (empty or missing, see ${log_file})"
             fi
         ) &
 
