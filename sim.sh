@@ -120,6 +120,7 @@ run_generate() {
     total=$((segments * per_segment))
 
     mkdir -p "${study_dir}/personas"
+    mkdir -p "${study_dir}/logs"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -141,10 +142,12 @@ run_generate() {
             continue
         fi
 
+        local log_file="${study_dir}/logs/persona-${padded}.log"
+
         # Launch in background
         (
             FACET_PHASE="Persona ${i}/${total}" \
-            claude --print --output-format stream-json \
+            claude --print --verbose --output-format stream-json \
                 --max-turns 15 \
                 --allowedTools "Read,Write" \
                 -p "You are generating persona ${i} of ${total} for a behavioral simulation study.
@@ -159,12 +162,12 @@ You are generating persona number ${i} (persona-${padded}).
 Find persona #${i} in the plan's persona outlines and generate a full persona for that outline.
 
 Write the complete persona to: ${output_path}" \
-                2>&1 | $STREAM_FILTER
+                2>&1 | tee "$log_file" | $STREAM_FILTER
 
             if validate_persona "$output_path" 2>/dev/null; then
                 echo "  done: persona-${padded}.md"
             else
-                echo "  WARN: persona-${padded}.md (validation issues)"
+                echo "  WARN: persona-${padded}.md (validation issues, see ${log_file})"
             fi
         ) &
 
