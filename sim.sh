@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Facet v2 — Pre-Launch Simulation Engine
 # Usage:
-#   ./sim.sh init     --config examples/perch-product.md [--name perch] [--concurrency 5]
+#   ./sim.sh init     --config examples/perch-product.md [--name perch] [--concurrency 5] [--calibration data.md]
 #   ./sim.sh exercise --study output/perch/ --config examples/perch-pricing.md [--concurrency 5]
 #   ./sim.sh status   --study output/perch/
 
@@ -50,15 +50,29 @@ update_status() {
 run_plan() {
     local config="$1"
     local study_dir="$2"
+    local calibration="${3:-}"
 
     local segments per_segment
     segments=$(parse_frontmatter "$config" "segments")
     per_segment=$(parse_frontmatter "$config" "personas_per_segment")
 
+    local calibration_instruction=""
+    if [ -n "$calibration" ]; then
+        calibration_instruction="
+5. Calibration data (ground personas in this real-world data): ${calibration}
+
+IMPORTANT: Calibration data has been provided. Use it to ground persona attributes,
+behavioral patterns, and segment design in real-world observations. Personas should
+reflect patterns found in this data, not just LLM training priors."
+    fi
+
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  PHASE 1: PLANNING                            ║"
     echo "║  Segments: ${segments}, Per segment: ${per_segment}              ║"
+    if [ -n "$calibration" ]; then
+    echo "║  Calibration: $(basename "$calibration")                        ║"
+    fi
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
@@ -76,7 +90,7 @@ Key parameters:
 - Segments to create: ${segments}
 - Personas per segment: ${per_segment}
 - Total personas: $((segments * per_segment))
-
+${calibration_instruction}
 Follow the instructions in the planning template exactly.
 Write the complete plan to: ${study_dir}/plan.md" \
         2>&1 | $STREAM_FILTER
@@ -183,6 +197,26 @@ Write the complete persona background to: ${output_path}" \
 
     if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -gt 20 ]; then
         echo "WARNING: >20% failure rate. Consider re-running."
+    fi
+
+    # Post-generate validation summary
+    echo ""
+    echo "Persona Validation Summary:"
+    local dealbreaker_count=0
+    local behecon_count=0
+    for f in "${study_dir}/personas"/persona-*.md; do
+        [ -f "$f" ] || continue
+        if grep -qi "deal-breaker\|deal_breaker\|dealbreaker" "$f" 2>/dev/null; then
+            ((dealbreaker_count++)) || true
+        fi
+        if grep -qi "BEHAVIORAL ECONOMICS PROFILE\|reference point\|loss aversion\|mental account" "$f" 2>/dev/null; then
+            ((behecon_count++)) || true
+        fi
+    done
+    echo "  Personas with deal-breakers: ${dealbreaker_count}/${completed}"
+    echo "  Personas with behavioral economics profile: ${behecon_count}/${completed}"
+    if [ "$completed" -gt 0 ] && [ "$dealbreaker_count" -lt "$((completed / 4))" ]; then
+        echo "  WARNING: <25% of personas mention deal-breakers. Diversity may be insufficient."
     fi
 
     update_status "$study_dir" "generate" "complete" "$completed" "$total"
@@ -323,6 +357,10 @@ Write the artifacts to: ${exercise_dir}/artifacts.md" \
         exit 1
     fi
 
+    if [ ! -s "${exercise_dir}/artifacts.md" ]; then
+        echo "WARNING: Artifacts file was not generated separately. Check synthesis.md for embedded artifacts."
+    fi
+
     update_status "$exercise_dir" "analyze" "complete"
 }
 
@@ -412,7 +450,7 @@ main() {
     local cmd="${1:-help}"
     shift || true
 
-    local config="" study_dir="" study_name="" concurrency="5"
+    local config="" study_dir="" study_name="" concurrency="5" calibration=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -420,9 +458,21 @@ main() {
             --study) study_dir="$2"; shift 2 ;;
             --name) study_name="$2"; shift 2 ;;
             --concurrency) concurrency="$2"; shift 2 ;;
+            --calibration) calibration="$2"; shift 2 ;;
             *) echo "Unknown argument: $1"; exit 1 ;;
         esac
     done
+
+    # Validate calibration file if provided
+    if [ -n "$calibration" ]; then
+        if [[ "$calibration" != /* ]]; then
+            calibration="${SCRIPT_DIR}/${calibration}"
+        fi
+        if [ ! -s "$calibration" ]; then
+            echo "ERROR: Calibration file not found or empty: $calibration"
+            exit 1
+        fi
+    fi
 
     # Resolve config to absolute path
     if [ -n "$config" ] && [[ "$config" != /* ]]; then
@@ -446,14 +496,24 @@ main() {
 
     case "$cmd" in
         init)
-            [ -z "$config" ] && { echo "Usage: ./sim.sh init --config <product-config> [--name <name>] [--concurrency N]"; exit 1; }
+            [ -z "$config" ] && { echo "Usage: ./sim.sh init --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"; exit 1; }
             mkdir -p "${study_dir}/personas"
+
+            # Version-lock init-phase templates
+            mkdir -p "${study_dir}/.templates"
+            cp "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/"
+            cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
+            echo "Templates version-locked to ${study_dir}/.templates/"
+
             echo ""
             echo "FACET SIMULATION ENGINE v2"
             echo "Config: $(basename "$config")"
             echo "Output: ${study_dir}"
+            if [ -n "$calibration" ]; then
+            echo "Calibration: $(basename "$calibration")"
+            fi
             echo ""
-            run_plan "$config" "$study_dir"
+            run_plan "$config" "$study_dir" "$calibration"
             run_generate "$config" "$study_dir" "$concurrency"
             echo ""
             echo "INIT COMPLETE — personas ready for exercises"
@@ -483,6 +543,17 @@ main() {
             # Copy exercise config into the exercise directory for reference
             cp "$config" "${exercise_dir}/exercise.md"
 
+            # Version-lock exercise-phase templates + study-type rules
+            local study_type
+            study_type=$(parse_frontmatter "$config" "study_type")
+            mkdir -p "${exercise_dir}/.templates"
+            cp "${SCRIPT_DIR}/templates/simulation.md" "${exercise_dir}/.templates/"
+            cp "${SCRIPT_DIR}/templates/analysis.md" "${exercise_dir}/.templates/"
+            if [ -n "$study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
+                cp "${SCRIPT_DIR}/study-types/${study_type}.md" "${exercise_dir}/.templates/"
+            fi
+            echo "Templates version-locked to ${exercise_dir}/.templates/"
+
             echo ""
             echo "FACET SIMULATION ENGINE v2"
             echo "Study: $(basename "$study_dir")"
@@ -508,7 +579,7 @@ main() {
             echo "Facet v2 — Pre-Launch Simulation Engine"
             echo ""
             echo "Usage:"
-            echo "  ./sim.sh init      --config <product-config> [--name <name>] [--concurrency N]"
+            echo "  ./sim.sh init      --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
             echo "  ./sim.sh exercise  --study <dir> --config <exercise-config> [--concurrency N]"
             echo "  ./sim.sh status    --study <dir>"
             echo ""
@@ -522,6 +593,7 @@ main() {
             echo "  --name        Study name (default: config filename without .md)"
             echo "  --study       Path to study output directory"
             echo "  --concurrency Number of parallel generations/simulations (default: 5)"
+            echo "  --calibration Path to calibration data file (real research data to ground personas)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/perch-product.md)"
