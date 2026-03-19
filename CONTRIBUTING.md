@@ -47,7 +47,6 @@ Add new exercise types (beyond pricing, copy, features) by creating `study-types
 - sim.sh uses `set -euo pipefail` — keep it that way
 - No new dependencies beyond bash, Python 3 stdlib, and Claude CLI
 - Test with: `./sim.sh init --config examples/superhuman-product.md --name test`
-- Claude Code skills in `.claude/commands/` follow the same patterns — Agent tool for isolation, Sonnet for generation/simulation
 
 ### Research Additions
 
@@ -67,14 +66,6 @@ The `research/` directory contains reports synthesizing ~490 academic sources. T
    ./sim.sh exercise --study output/test/ --config examples/superhuman-pricing.md
    ```
 4. Check output in `output/test/`
-
-### Using Claude Code
-
-Facet includes two Claude Code slash commands for interactive testing:
-- `/facet-init` — runs the full init pipeline inside Claude Code
-- `/facet-run` — runs an exercise pipeline inside Claude Code
-
-These are useful for testing template changes interactively without running sim.sh.
 
 ## Submitting Changes
 

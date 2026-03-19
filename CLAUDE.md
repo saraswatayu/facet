@@ -11,9 +11,8 @@ sim.sh init:     Plan (Opus) → Generate (Sonnet, parallel waves)
 sim.sh exercise: Simulate (Sonnet, parallel) → Analyze (Opus)
 ```
 
-Two interfaces to the same pipeline:
+Primary interface:
 - **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `claude --print` subprocess.
-- **Claude Code skills** — `/facet-init` and `/facet-run` in `.claude/commands/`. Each phase uses the Agent tool for context isolation.
 
 Key design: personas are generated ONCE and reused across multiple exercises.
 
@@ -86,21 +85,6 @@ The `--calibration` flag grounds personas in real-world data instead of LLM prio
 
 Supported file types: `.md`, `.csv`, `.txt`, `.json`, `.yaml`, `.yml`.
 
-## Claude Code Skills
-
-Two skills in `.claude/commands/`:
-
-**`/facet-init <config> [--name N] [--concurrency N] [--calibration path]`**
-- Runs planning directly (Claude does the work inline)
-- Spawns Agent per persona for generation (context isolation, same as sim.sh subprocesses)
-- Wave-based: waits for each wave, builds diversity context, then spawns next wave
-- Agents use `model: "sonnet"`
-
-**`/facet-run <study-dir> <exercise-config> [--concurrency N]`**
-- Spawns Agent per persona for simulation (parallel, context isolation)
-- Runs analysis inline (needs to read all personas + simulations in one context)
-- Agents use `model: "sonnet"`
-
 ## Key Files
 
 ```
@@ -125,9 +109,7 @@ examples/
   superhuman-onboarding.md — example onboarding exercise (3 flows)
   superhuman-retention.md  — example retention exercise (3 strategies)
 research/               — ~490-source research reports informing template design
-.claude/commands/
-  facet-init.md         — Claude Code skill for init pipeline
-  facet-run.md          — Claude Code skill for exercise pipeline
+setup                   — dependency check and quickstart guide
 ```
 
 ## Config Format
