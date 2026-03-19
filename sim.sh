@@ -58,12 +58,25 @@ run_plan() {
 
     local calibration_instruction=""
     if [ -n "$calibration" ]; then
-        calibration_instruction="
+        if [ -d "$calibration" ]; then
+            calibration_instruction="
+5. Calibration data directory: ${calibration}
+
+IMPORTANT: A calibration data directory has been provided with real-world research data.
+Use Glob to discover all files in this directory (and subdirectories).
+If a manifest.md file exists at the root, read it FIRST — it describes each file's purpose and relevance.
+Then read the files most relevant to planning (survey data, interview themes, market research).
+You do not need to read every file — prioritize files that inform segment design and persona attributes.
+Ground persona attributes, behavioral patterns, and segment design in patterns from this data, not just LLM training priors.
+In the plan output, add a 'Calibration Sources' section listing which files you read and what you extracted from each."
+        else
+            calibration_instruction="
 5. Calibration data (ground personas in this real-world data): ${calibration}
 
 IMPORTANT: Calibration data has been provided. Use it to ground persona attributes,
 behavioral patterns, and segment design in real-world observations. Personas should
 reflect patterns found in this data, not just LLM training priors."
+        fi
     fi
 
     echo ""
@@ -71,7 +84,11 @@ reflect patterns found in this data, not just LLM training priors."
     echo "║  PHASE 1: PLANNING                            ║"
     echo "║  Segments: ${segments}, Per segment: ${per_segment}              ║"
     if [ -n "$calibration" ]; then
+        if [ -d "$calibration" ]; then
+    echo "║  Calibration: $(basename "$calibration")/ (directory)            ║"
+        else
     echo "║  Calibration: $(basename "$calibration")                        ║"
+        fi
     fi
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
@@ -124,6 +141,7 @@ run_generate() {
     local config="$1"
     local study_dir="$2"
     local concurrency="${3:-5}"
+    local calibration="${4:-}"
     local wave_size=5
 
     if [ ! -f "${study_dir}/plan.md" ]; then
@@ -186,20 +204,38 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
 
             local log_file="${study_dir}/logs/persona-${padded}.log"
 
+            # Build calibration context for persona generation
+            local persona_calibration=""
+            local persona_tools="Read,Write"
+            if [ -n "$calibration" ]; then
+                if [ -d "$calibration" ]; then
+                    persona_calibration="
+4. Calibration data directory: ${calibration}
+   Use Glob to discover files, then read any that are relevant to THIS persona's segment.
+   Ground specific details (salary ranges, behavior patterns, pain points, quotes) in this real data.
+   The plan's 'Calibration Sources' section lists what data is available."
+                    persona_tools="Read,Write,Glob,Grep"
+                else
+                    persona_calibration="
+4. Calibration data: ${calibration}
+   Read this file and ground specific persona details in its real-world data."
+                fi
+            fi
+
             # Launch in background
             (
                 FACET_PHASE="Persona ${i}/${total} (wave ${wave})" \
                 claude --print --verbose --output-format stream-json \
                     --max-turns 15 \
                     --model sonnet \
-                    --allowedTools "Read,Write" \
+                    --allowedTools "${persona_tools}" \
                     -p "You are generating persona ${i} of ${total} for a behavioral simulation study.
 
 Read these files for context:
 1. Product config: ${config}
 2. Study plan (segment matrix, persona outlines, name registry, cross-references): ${study_dir}/plan.md
 3. Persona template (follow these instructions): ${SCRIPT_DIR}/templates/persona.md
-
+${persona_calibration}
 You are generating persona number ${i} (persona-${padded}).
 Find persona #${i} in the plan's persona outlines and generate a full persona BACKGROUND for that outline.
 
@@ -517,13 +553,27 @@ main() {
         esac
     done
 
-    # Validate calibration file if provided
+    # Validate calibration path if provided (file or directory)
     if [ -n "$calibration" ]; then
         if [[ "$calibration" != /* ]]; then
             calibration="${SCRIPT_DIR}/${calibration}"
         fi
-        if [ ! -s "$calibration" ]; then
-            echo "ERROR: Calibration file not found or empty: $calibration"
+        if [ -d "$calibration" ]; then
+            # Directory — check it's not empty
+            local file_count
+            file_count=$(find "$calibration" -type f \( -name "*.md" -o -name "*.csv" -o -name "*.txt" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$file_count" -eq 0 ]; then
+                echo "ERROR: Calibration directory has no readable files (.md/.csv/.txt/.json/.yaml): $calibration"
+                exit 1
+            fi
+            echo "Calibration: directory with ${file_count} files"
+        elif [ -f "$calibration" ]; then
+            if [ ! -s "$calibration" ]; then
+                echo "ERROR: Calibration file is empty: $calibration"
+                exit 1
+            fi
+        else
+            echo "ERROR: Calibration path not found: $calibration"
             exit 1
         fi
     fi
@@ -564,11 +614,17 @@ main() {
             echo "Config: $(basename "$config")"
             echo "Output: ${study_dir}"
             if [ -n "$calibration" ]; then
-            echo "Calibration: $(basename "$calibration")"
+                if [ -d "$calibration" ]; then
+                    local cal_count
+                    cal_count=$(find "$calibration" -type f \( -name "*.md" -o -name "*.csv" -o -name "*.txt" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) 2>/dev/null | wc -l | tr -d ' ')
+                    echo "Calibration: $(basename "$calibration")/ (${cal_count} files)"
+                else
+                    echo "Calibration: $(basename "$calibration")"
+                fi
             fi
             echo ""
             run_plan "$config" "$study_dir" "$calibration"
-            run_generate "$config" "$study_dir" "$concurrency"
+            run_generate "$config" "$study_dir" "$concurrency" "$calibration"
             echo ""
             echo "INIT COMPLETE — personas ready for exercises"
             echo "Output: ${study_dir}/"
@@ -647,7 +703,7 @@ main() {
             echo "  --name        Study name (default: config filename without .md)"
             echo "  --study       Path to study output directory"
             echo "  --concurrency Number of parallel generations/simulations (default: 5)"
-            echo "  --calibration Path to calibration data file (real research data to ground personas)"
+            echo "  --calibration Path to calibration data file OR directory (real research data to ground personas)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/perch-product.md)"
