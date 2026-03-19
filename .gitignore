@@ -6,7 +6,6 @@ output/
 .agent/
 .agents/
 .augment/
-.claude/
 .codebuddy/
 .commandcode/
 .continue/
