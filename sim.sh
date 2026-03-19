@@ -10,6 +10,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
 
+# --- Count non-empty files matching a pattern in a directory ---
+count_files() {
+    local dir="$1" pattern="${2:-*.md}"
+    find "$dir" -name "$pattern" -size +0c 2>/dev/null | wc -l | tr -d ' '
+}
+
 # --- Parse YAML frontmatter from config ---
 parse_frontmatter() {
     local config="$1"
@@ -279,7 +285,7 @@ $(extract_persona_summary "$pfile")"
     done
 
     local completed
-    completed=$(find "${study_dir}/personas" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+    completed=$(count_files "${study_dir}/personas" "persona-*.md")
     local failed=$((total - completed))
 
     echo ""
@@ -329,7 +335,7 @@ run_simulate() {
 
     # Count personas
     local total
-    total=$(find "${study_dir}/personas" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+    total=$(count_files "${study_dir}/personas" "persona-*.md")
 
     if [ "$total" -eq 0 ]; then
         echo "ERROR: No personas found in ${study_dir}/personas/. Run 'init' first."
@@ -399,7 +405,7 @@ Write the simulation to: ${output_path}" \
     wait
 
     local completed
-    completed=$(find "${exercise_dir}/simulations" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+    completed=$(count_files "${exercise_dir}/simulations" "persona-*.md")
     local failed=$((total - completed))
 
     echo ""
@@ -466,7 +472,7 @@ show_status() {
     # Persona count
     local persona_count=0
     if [ -d "${study_dir}/personas" ]; then
-        persona_count=$(find "${study_dir}/personas" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+        persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
     fi
     echo "Personas generated: ${persona_count}"
 
@@ -480,7 +486,7 @@ show_status() {
                 ename=$(basename "$exercise")
                 local sim_count=0
                 if [ -d "${exercise}/simulations" ]; then
-                    sim_count=$(find "${exercise}/simulations" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+                    sim_count=$(count_files "${exercise}/simulations" "persona-*.md")
                 fi
                 local has_synthesis="no"
                 [ -f "${exercise}/synthesis.md" ] && has_synthesis="yes"
