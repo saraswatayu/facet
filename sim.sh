@@ -275,7 +275,7 @@ $(extract_persona_summary "$pfile")"
             fi
         done
 
-        ((wave++))
+        ((wave++)) || true
     done
 
     local completed
