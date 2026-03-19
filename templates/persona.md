@@ -21,6 +21,17 @@ You are generating an analytical behavioral profile, not a product pitch.
 
 ---
 
+## Diversity Context (if provided)
+
+If a list of already-generated personas is provided in your prompt, your persona MUST be distinct from all of them. Specifically:
+- Different vocabulary and sentence structure in internal monologues
+- Different emotional register (if prior personas are measured and analytical, this one should be impulsive or emotional, or vice versa)
+- Different financial situation and spending patterns
+- Different discovery channel and information access path
+- If you notice a pattern in prior personas (all positive about the product, all in similar income ranges, all analytical decision-makers), deliberately break that pattern
+
+---
+
 ## Pre-Generation Step (do NOT include in output file)
 
 Before writing the full persona, brainstorm 3 distinct archetypes for this segment outline:
