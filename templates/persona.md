@@ -21,6 +21,19 @@ You are generating an analytical behavioral profile, not a product pitch.
 
 ---
 
+## Calibration Data (if provided)
+
+If calibration data was provided (a file or directory path in your instructions), use it to ground this persona in real-world observations:
+
+- Read the plan's "Calibration Sources" section to see which files are available and what was extracted
+- For directory calibration: use Glob to find files, then read those most relevant to THIS persona's segment
+- Look for: real quotes you can echo in internal monologues, actual salary/spending data for the persona's job and city, real behavior patterns, real pain points and objections
+- Prefer specific data points over general patterns (e.g., "survey respondents in this segment cited $12/month as their ceiling" over "users prefer lower prices")
+- If interview transcripts are available, borrow vocabulary and phrasing patterns from real respondents in similar segments
+- Do NOT copy verbatim — use real data as grounding, then extrapolate a specific individual
+
+---
+
 ## Diversity Context (if provided)
 
 If a list of already-generated personas is provided in your prompt, your persona MUST be distinct from all of them. Specifically:
