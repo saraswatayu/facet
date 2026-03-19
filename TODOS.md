@@ -11,16 +11,9 @@
 **Effort:** M (human) → S (CC)
 **Depends on:** Requires deciding on embedding provider (OpenAI, local model, or Claude embedding).
 
-## P2: Batched Generation
+## ~~P2: Batched Generation~~ DONE
 
-**What:** Generate personas in waves of 5-10 rather than all independently. Each wave includes summaries of previously generated personas to encourage distinctiveness.
-
-**Why:** Even with good constraint vectors, parallel generation can produce homogeneous outputs because each Claude call has no awareness of what other calls produced. Guide-to-Generation (G2) research shows coordinated generation with a Diversity Guide prevents convergence.
-
-**Pros:** 1.6-2.1x diversity improvement on top of structural constraints.
-**Cons:** Significantly more complex orchestrator logic. Slower generation. Wave coordination adds failure modes.
-**Effort:** L (human) → M (CC)
-**Depends on:** Should evaluate diversity metrics first to determine if structural constraints are sufficient.
+Implemented: wave-based generation in sim.sh. Waves of 5, inter-wave summaries passed as diversity context. See commit history.
 
 ## P3: Retrospective Validation Corpus
 
@@ -33,13 +26,6 @@
 **Effort:** L (human) → L (CC)
 **Depends on:** Access to real outcome data.
 
-## P3: Multi-Persona Thinking for Plan Phase
+## ~~P3: Multi-Persona Thinking for Plan Phase~~ DONE
 
-**What:** Before designing segments, have the plan phase brainstorm 5-6 very different perspectives on the product (a skeptic, an enthusiast, a confused newcomer, a budget parent, a tech early adopter, an elderly technophobe). Then use these perspectives to inform segment design.
-
-**Why:** Multi-Persona Thinking (MPT) reduces bias in LLM outputs by engaging the model in dialectical process across different social identities (arXiv:2601.15488).
-
-**Pros:** Reduces stereotypical segment designs. Low cost — just a prompt addition.
-**Cons:** Adds ~500 tokens to plan phase. May slow plan generation.
-**Effort:** S (human) → S (CC)
-**Depends on:** None. Can be added independently.
+Implemented: section 0 "Perspective Brainstorm" in plan.md. 6 radically different perspectives brainstormed before segment design. See commit history.

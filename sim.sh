@@ -105,11 +105,26 @@ Write the complete plan to: ${study_dir}/plan.md" \
     update_status "$study_dir" "plan" "complete"
 }
 
-# --- Phase: Generate Persona Backgrounds ---
+# --- Extract one-line summary from a persona file ---
+extract_persona_summary() {
+    local file="$1"
+    local padded
+    padded=$(basename "$file" .md | sed 's/persona-//')
+    # Get the first heading (usually the persona's name)
+    local name
+    name=$(grep -m1 "^#" "$file" 2>/dev/null | sed 's/^#* *//' || echo "Unknown")
+    # Get first 3 non-empty lines of the IDENTITY section
+    local identity
+    identity=$(sed -n '/IDENTITY/,/^###/{/IDENTITY/d;/^###/d;/^$/d;p;}' "$file" 2>/dev/null | head -3 | tr '\n' ' ' | sed 's/  */ /g' | cut -c1-200)
+    echo "- Persona ${padded}: ${name} — ${identity}"
+}
+
+# --- Phase: Generate Persona Backgrounds (wave-based) ---
 run_generate() {
     local config="$1"
     local study_dir="$2"
     local concurrency="${3:-5}"
+    local wave_size=5
 
     if [ ! -f "${study_dir}/plan.md" ]; then
         echo "ERROR: No plan found at ${study_dir}/plan.md. Run 'init' first."
@@ -122,39 +137,63 @@ run_generate() {
     per_segment=$(parse_frontmatter "$config" "personas_per_segment")
     total=$((segments * per_segment))
 
+    local wave_count=$(( (total + wave_size - 1) / wave_size ))
+
     mkdir -p "${study_dir}/personas"
     mkdir -p "${study_dir}/logs"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  PHASE 2: GENERATING PERSONA BACKGROUNDS      ║"
-    echo "║  Total: ${total}, Concurrency: ${concurrency}                    ║"
+    echo "║  Total: ${total}, Waves: ${wave_count} x ${wave_size}, Concurrency: ${concurrency}     ║"
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
-    local running=0
+    local generated_summaries=""
+    local wave=1
 
-    for i in $(seq 1 "$total"); do
-        local padded
-        padded=$(printf '%03d' "$i")
-        local output_path="${study_dir}/personas/persona-${padded}.md"
+    for wave_start in $(seq 1 "$wave_size" "$total"); do
+        local wave_end=$((wave_start + wave_size - 1))
+        [ "$wave_end" -gt "$total" ] && wave_end="$total"
 
-        # Skip if already generated
-        if [ -s "$output_path" ]; then
-            echo "  skip: persona-${padded}.md (already exists)"
-            continue
+        echo "  Wave ${wave}/${wave_count}: personas ${wave_start}-${wave_end}"
+
+        # Build diversity context for this wave
+        local diversity_context=""
+        if [ -n "$generated_summaries" ]; then
+            diversity_context="
+
+ALREADY GENERATED PERSONAS (from previous waves — your persona must be DISTINCT from these):
+${generated_summaries}
+
+Your persona must sound, think, and decide differently from ALL of the above.
+Do not repeat their financial situations, personality patterns, discovery channels, or emotional responses.
+If you notice patterns above (e.g., all positive, all analytical, all urban), deliberately break them."
         fi
 
-        local log_file="${study_dir}/logs/persona-${padded}.log"
+        local running=0
 
-        # Launch in background
-        (
-            FACET_PHASE="Persona ${i}/${total}" \
-            claude --print --verbose --output-format stream-json \
-                --max-turns 15 \
-                --model sonnet \
-                --allowedTools "Read,Write" \
-                -p "You are generating persona ${i} of ${total} for a behavioral simulation study.
+        for i in $(seq "$wave_start" "$wave_end"); do
+            local padded
+            padded=$(printf '%03d' "$i")
+            local output_path="${study_dir}/personas/persona-${padded}.md"
+
+            # Skip if already generated
+            if [ -s "$output_path" ]; then
+                echo "    skip: persona-${padded}.md (already exists)"
+                continue
+            fi
+
+            local log_file="${study_dir}/logs/persona-${padded}.log"
+
+            # Launch in background
+            (
+                FACET_PHASE="Persona ${i}/${total} (wave ${wave})" \
+                claude --print --verbose --output-format stream-json \
+                    --max-turns 15 \
+                    --model sonnet \
+                    --allowedTools "Read,Write" \
+                    -p "You are generating persona ${i} of ${total} for a behavioral simulation study.
 
 Read these files for context:
 1. Product config: ${config}
@@ -166,27 +205,42 @@ Find persona #${i} in the plan's persona outlines and generate a full persona BA
 
 IMPORTANT: Generate ONLY the background (identity, psychology, domain profile, discovery, cross-references).
 Do NOT include option simulations, verdicts, or copy reactions — those are generated separately.
-
+${diversity_context}
 Write the complete persona background to: ${output_path}" \
-                2>&1 | tee "$log_file" | $STREAM_FILTER
+                    2>&1 | tee "$log_file" | $STREAM_FILTER
 
-            if validate_persona "$output_path" 2>/dev/null; then
-                echo "  done: persona-${padded}.md"
-            else
-                echo "  WARN: persona-${padded}.md (validation issues, see ${log_file})"
+                if validate_persona "$output_path" 2>/dev/null; then
+                    echo "    done: persona-${padded}.md"
+                else
+                    echo "    WARN: persona-${padded}.md (validation issues, see ${log_file})"
+                fi
+            ) &
+
+            ((running++)) || true
+
+            # Throttle concurrency within wave
+            if [ "$running" -ge "$concurrency" ]; then
+                wait -n 2>/dev/null || true
+                ((running--)) || true
             fi
-        ) &
+        done
 
-        ((running++)) || true
+        # Wait for entire wave to complete before starting next
+        wait
 
-        # Throttle concurrency
-        if [ "$running" -ge "$concurrency" ]; then
-            wait -n 2>/dev/null || true
-            ((running--)) || true
-        fi
+        # Build summaries from this wave for the next wave's diversity context
+        for i in $(seq "$wave_start" "$wave_end"); do
+            local padded
+            padded=$(printf '%03d' "$i")
+            local pfile="${study_dir}/personas/persona-${padded}.md"
+            if [ -s "$pfile" ]; then
+                generated_summaries="${generated_summaries}
+$(extract_persona_summary "$pfile")"
+            fi
+        done
+
+        ((wave++))
     done
-
-    wait
 
     local completed
     completed=$(find "${study_dir}/personas" -name "persona-*.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
