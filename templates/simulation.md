@@ -6,6 +6,19 @@ The exercise config, persona background file, and study-type rules have been pro
 
 ---
 
+## Simulation Integrity Rules
+
+This simulation is a behavioral prediction, not a product demonstration.
+
+- Rejection is a valid and expected outcome. If this persona's deal-breakers, budget constraints, or status quo bias make conversion implausible, DO NOT force a conversion. Not every persona is a customer.
+- If the persona would not convert under ANY option, say so and explain why.
+- Even personas who convert MUST have a moment of genuine doubt. No frictionless decisions.
+- NPS scores above 8 require exceptional justification. Most real users score 6-7 for products they like. Scores of 9-10 mean they are actively evangelizing — this should be rare.
+- If more than one option would lead to the same outcome for this persona, say so — do not manufacture a preference.
+- Deal-breakers established in the persona background MUST be honored. If the persona said "walks away from any subscription over $15/month," a $49/year subscription must trigger that deal-breaker.
+
+---
+
 ## Quality Bar
 
 This simulation must read as a continuation of the persona's story. The persona's voice, vocabulary, financial constraints, and behavioral patterns established in the background file must carry through every internal monologue and decision. Numbers must be specific and internally consistent — if the persona earns $38,500/year, their spending decisions must reflect that reality. Do not flatten the persona into a generic consumer. Maintain every quirk, every constraint, every formative memory.
@@ -28,9 +41,17 @@ The simulation file should begin with a header identifying the persona (name, ID
 
 #### Signup/Purchase Decision
 
-- Internal monologue during the decision (quoted, in this persona's voice, with their vocabulary and thought patterns)
-- Whether they convert and why/why not — the reasoning must connect to specific details from their background (income, psychology, current subscriptions, formative money memories)
-- If they don't convert: what would change their mind? What's the specific counterfactual?
+Show the decision as an emotional arc (Chain-of-Feeling):
+
+1. **Gut reaction** (first 3 seconds — before any analysis. What's the immediate feeling? Excitement? Skepticism? Confusion? Indifference?)
+2. **Building considerations** (what they notice, what they compare to. Reference their specific reference point, loss aversion level, mental accounting category, and status quo bias from the background. Use their processing mode — System 1 personas react intuitively, System 2 personas build spreadsheets.)
+3. **The moment of doubt** (what gives them pause — there MUST be one, even for enthusiastic personas. What almost stopped them?)
+4. **Resolution** (what tips the scale, or why they walk away. If they walk away: what specific, concrete change would make them convert? Not "lower the price" but "if it were under $4/month, she'd try it for one month.")
+
+Use this persona's actual vocabulary. A software engineer's internal monologue reads differently from a warehouse supervisor's. Show cognitive style, not just content.
+
+- Whether they convert and why/why not — reasoning must connect to specific details from their background
+- If they don't convert: what specific, concrete change would make them convert?
 
 #### 12-Month Usage Simulation (if they convert)
 
@@ -68,6 +89,10 @@ All four numbers are mandatory. The effective cost rate is (total cost / gross v
 - How they describe it — the exact words they'd use, in their register
 - The referral story — does it travel cleanly or get muddled? Is the value proposition easy to retell?
 - Referral multiplier — how many people hear about it, and how many of those would actually try it?
+- **Story Travelability Score (1-5)**:
+  - 5 = one-sentence retellable, travels cleanly through text/WhatsApp
+  - 3 = requires context, may get garbled in retransmission
+  - 1 = too complex to relay, dies on first retransmission
 
 #### NPS Score (0-10)
 
@@ -79,12 +104,15 @@ All four numbers are mandatory. The effective cost rate is (total cost / gross v
 
 ### VERDICT
 
-After all option simulations, this section summarizes the persona's overall position:
+Structured decision summary using Beliefs-Desires-Intentions:
 
-- **Preference:** Which option this persona prefers and why (in their own voice, quoted — 2-4 sentences)
-- **Revenue comparison:** Which option generates more revenue for the company from this persona (show the math)
-- **Referral likelihood:** Which option makes this persona more likely to refer others (and why — connect to the referral story quality)
-- **Representative quotes:** One quote per option — something this persona would actually say to a friend about each option. These should be distinct in tone and content, not just reworded versions of the same sentiment.
+- **Beliefs**: What does this persona believe about the product, each option, and their own needs? (Must connect to their background — not generic beliefs)
+- **Desires**: What outcome do they actually want? (May not align with what the product offers)
+- **Intentions**: What will they actually DO? (Convert to which option, reject all, defer decision, ask a friend first, etc.)
+- **Preference**: Which option this persona prefers and why (in their own voice, quoted — 2-4 sentences)
+- **Revenue comparison**: Which option generates more revenue for the company from this persona (show the math)
+- **Referral likelihood**: Which option makes this persona more likely to refer others (and why — connect to the referral story quality and travelability score)
+- **Representative quotes**: One quote per option — something this persona would actually say to a friend about each option. These must be distinct in tone and content, not just reworded versions of the same sentiment.
 
 ---
 
@@ -108,7 +136,10 @@ After all variants: **Final ranking** (best to worst for THIS persona) with one-
 ## Consistency Rules
 
 - Every dollar amount must be traceable. If the persona saves $180 on a flight, that number must appear in the simulation table, the 12-month totals, and the verdict's revenue comparison.
-- The persona's behavior must be consistent with their background. A persona who described subscription fatigue in their psychology section should show that fatigue in their signup decision. A persona who keeps a regret-score spreadsheet should reference it.
-- Usage patterns must match the persona's domain profile. A persona who flies twice a year should not have eight flight interactions. A persona who described themselves as a power user should not have two.
+- The persona's behavior must be consistent with their background. A persona who described subscription fatigue should show that fatigue in their signup decision. A persona who keeps a regret-score spreadsheet should reference it.
+- Usage patterns must match the persona's domain profile. A persona who flies twice a year should not have eight flight interactions. A power user should not have two.
 - Emotional reactions must reflect the persona's established personality, not generic consumer reactions. A skeptic should stay skeptical even when satisfied. An enthusiast should find things to love even when frustrated.
 - NPS scores must be justified by the simulation, not assigned arbitrarily. A persona who had three friction points and nearly churned should not score 9/10.
+- Deal-breakers from the persona background MUST be honored. If the background says "walks away from any subscription over $15/month," the simulation must reflect that.
+- Behavioral economics parameters from the background must be active. A persona with "strong status quo bias" should not casually switch. A "System 1" persona should not write a pros/cons list.
+- If the persona's information access (from the background) is limited, their decision should reflect ONLY what they know, not the full product description.
