@@ -87,7 +87,7 @@ Profitability dashboard: revenue per client, average hourly rate,
 payment speed. Helps freelancers focus on high-value relationships.
 ```
 
-## Study Config (for sim.sh study)
+## Run Config (for sim.sh run)
 
 ```yaml
 ---

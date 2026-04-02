@@ -8,11 +8,11 @@ Six-command pipeline:
 
 ```
 sim.sh init:       Plan (Opus) → Generate (Sonnet, parallel waves)
-sim.sh study:   Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
+sim.sh study:      Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
 sim.sh synthesize: Cross-Synthesis (Opus) — unified findings across studies
-sim.sh study:      Full lifecycle — init + all studies + synthesize (single command)
-sim.sh compare:    Diff findings between two study runs
-sim.sh status:     Study progress, study completion, cross-synthesis readiness
+sim.sh run:        Full lifecycle — init panel + all studies + synthesize (single command)
+sim.sh compare:    Diff findings between two panels
+sim.sh status:     Panel progress, study completion, cross-synthesis readiness
 ```
 
 Primary interface:
@@ -94,7 +94,7 @@ Supported file types: `.md`, `.csv`, `.txt`, `.json`, `.yaml`, `.yml`.
 ## Key Files
 
 ```
-sim.sh                  — orchestrator (init, study, status subcommands)
+sim.sh                  — orchestrator (init, study, synthesize, run, compare, status subcommands)
 stream_filter.py        — real-time progress display, parses stream-json, uses FACET_PHASE env var
 templates/
   plan.md               — planning: segments, constraint vectors, diversity matrix, name registry
@@ -131,7 +131,7 @@ study-templates/        — 5 pre-built study configs (concept, pricing, activat
 
 **Study config** (for `study`): Markdown with YAML frontmatter containing `study_name`, `study_type`, `options`, and optionally `copy_variants`. Body has options detail and copy variants.
 
-**Study config** (for `study`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `studies` array. Each study entry has a `config` path (relative to the study config file). Body is the product description (doubles as product config for init).
+**Full run config** (for `run`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `studies` array. Each study entry has a `config` path (relative to the config file). Body is the product description (doubles as product config for init).
 
 See `examples/` for study/product configs, `study-templates/` for study configs.
 

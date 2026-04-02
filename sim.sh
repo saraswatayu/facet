@@ -13,6 +13,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
 
+# --- Sanitize a name for use in directory paths (prevent path traversal) ---
+sanitize_name() {
+    local name="$1"
+    name=$(basename "$name")
+    name="${name//../}"
+    echo "$name"
+}
+
 # --- Count non-empty files matching a pattern in a directory ---
 count_files() {
     local dir="$1" pattern="${2:-*.md}"
@@ -134,10 +142,11 @@ for phase_name, vals in durations.items():
     # Calculate estimates
     local waves=$(( (personas + 4) / 5 ))  # wave size = 5
     local gen_time=$(( waves * avg_gen_per_persona ))  # wave-serial, not fully parallel
-    local sim_time_per_ex=$(( (personas + concurrency - 1) / concurrency * avg_sim_per_persona ))
-    local analysis_time_per_ex="$avg_analysis"
-    local total_study_time=$(( studies * (sim_time_per_ex + analysis_time_per_ex) ))
-    local total=$(( gen_time + total_study_time + avg_cross_synth ))
+    local sim_time_per_study=$(( (personas + concurrency - 1) / concurrency * avg_sim_per_persona ))
+    local analysis_time_per_study="$avg_analysis"
+    local total_study_time=$(( studies * (sim_time_per_study + analysis_time_per_study) ))
+    local total=$(( gen_time + total_study_time ))
+    [ "$studies" -gt 1 ] && total=$(( total + avg_cross_synth ))
 
     # Format as minutes
     local minutes=$(( (total + 59) / 60 ))
@@ -1019,6 +1028,7 @@ main() {
                 study_name="${study_name%-study}"
             fi
         fi
+        study_name=$(sanitize_name "$study_name")
         local base_dir="${output_dir:-${SCRIPT_DIR}/output}"
         panel_dir="${base_dir}/${study_name}"
     fi
@@ -1109,6 +1119,7 @@ main() {
             if [ -z "$study_name" ]; then
                 study_name=$(basename "$config" .md)
             fi
+            study_name=$(sanitize_name "$study_name")
 
             local study_dir="${panel_dir}/studies/${study_name}"
             mkdir -p "${study_dir}/simulations"
@@ -1127,7 +1138,7 @@ main() {
 
             echo ""
             echo "FACET SIMULATION ENGINE v2"
-            echo "Study: $(basename "$panel_dir")"
+            echo "Panel: $(basename "$panel_dir")"
             echo "Study: ${study_name}"
             echo "Config: $(basename "$config")"
             estimate_time "$ex_persona_count" 1 "$concurrency" "$output_dir"
@@ -1402,6 +1413,7 @@ Write the comparison to: ${compare_output}" \
                 local ex_name
                 ex_name=$(parse_frontmatter "$study_config_path" "study_name")
                 [ -z "$ex_name" ] && ex_name=$(basename "$study_config_path" .md)
+                ex_name=$(sanitize_name "$ex_name")
 
                 local ex_dir="${panel_dir}/studies/${ex_name}"
 
@@ -1497,6 +1509,7 @@ Write the comparison to: ${compare_output}" \
             echo "  --calibration Path to calibration data file OR directory"
             echo "  --continue-on-error Skip failed studies instead of halting (run command only)"
             echo "  --runs        Number of simulation runs for stability testing (default: 1)"
+            echo "  --panel2      Path to second panel (compare command only)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/superhuman-product.md)"
