@@ -170,6 +170,7 @@ version_lock_study_templates() {
     ensure_version_locked_template "${SCRIPT_DIR}/templates/plan.md" "${panel_dir}/.templates/plan.md"
     ensure_version_locked_template "${SCRIPT_DIR}/templates/persona.md" "${panel_dir}/.templates/persona.md"
     ensure_version_locked_template "${SCRIPT_DIR}/templates/cross-synthesis.md" "${panel_dir}/.templates/cross-synthesis.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/comparison.md" "${panel_dir}/.templates/comparison.md"
 }
 
 version_lock_study_phase_templates() {
@@ -179,6 +180,7 @@ version_lock_study_phase_templates() {
     mkdir -p "${study_dir}/.templates"
     ensure_version_locked_template "${SCRIPT_DIR}/templates/simulation.md" "${study_dir}/.templates/simulation.md"
     ensure_version_locked_template "${SCRIPT_DIR}/templates/analysis.md" "${study_dir}/.templates/analysis.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/stability.md" "${study_dir}/.templates/stability.md"
 
     # Validate study_type contains no path separators (prevent path traversal)
     if [ -n "$study_type" ] && [[ "$study_type" != */* ]] && [[ "$study_type" != *..* ]] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
@@ -1167,7 +1169,7 @@ main() {
                     -p "You are generating a stability report for a Facet simulation study.
 
 Read these files for context:
-1. Stability template: ${SCRIPT_DIR}/templates/stability.md
+1. Stability template: ${study_dir}/.templates/stability.md
 2. Study config: ${config}
 
 The study was run ${runs} times with the same personas. Read simulation files from each run:
@@ -1265,7 +1267,7 @@ Write the stability report to: ${study_dir}/stability-report.md" \
                 -p "You are comparing two Facet simulation studies.
 
 Read these files for context:
-1. Comparison template (follow these instructions): ${SCRIPT_DIR}/templates/comparison.md
+1. Comparison template (follow these instructions): ${panel_dir}/.templates/comparison.md
 
 Study A ($(basename "$panel_dir")):
 ${study_a_files}
