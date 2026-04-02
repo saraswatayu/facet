@@ -1,5 +1,5 @@
 ---
-exercise_name: retention-strategies
+study_name: retention-strategies
 study_type: retention
 options:
   - name: "Strategy A"

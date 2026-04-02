@@ -61,7 +61,7 @@ def main():
         if isinstance(value, list):
             for item in value:
                 if isinstance(item, dict):
-                    # Handle list of dicts (e.g., exercises with 'config' key)
+                    # Handle list of dicts (e.g., studies with 'config' key)
                     for v in item.values():
                         print(v)
                 else:

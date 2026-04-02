@@ -3,9 +3,12 @@ set -euo pipefail
 
 # Facet v2 — Pre-Launch Simulation Engine
 # Usage:
-#   ./sim.sh init     --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md]
-#   ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md [--concurrency 5]
-#   ./sim.sh status   --study output/superhuman/
+#   ./sim.sh init   --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md] [--output-dir /path/to/output]
+#   ./sim.sh study  --panel output/superhuman/ --config examples/superhuman-pricing.md [--concurrency 5]
+#   ./sim.sh status --panel output/superhuman/
+#
+# --output-dir: override base output directory (default: ./output/). Used by /facet skill
+#               to write study output to the user's project instead of the Facet install dir.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
@@ -42,19 +45,19 @@ validate_persona() {
 
 # --- Status tracking ---
 update_status() {
-    local study_dir="$1" phase="$2" status="$3" count="${4:-}" total="${5:-}"
+    local panel_dir="$1" phase="$2" status="$3" count="${4:-}" total="${5:-}"
     local ts
     ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     if [ -n "$count" ]; then
-        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"count\":${count},\"total\":${total},\"timestamp\":\"${ts}\"}" >> "${study_dir}/.status"
+        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"count\":${count},\"total\":${total},\"timestamp\":\"${ts}\"}" >> "${panel_dir}/.status"
     else
-        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"timestamp\":\"${ts}\"}" >> "${study_dir}/.status"
+        echo "{\"phase\":\"${phase}\",\"status\":\"${status}\",\"timestamp\":\"${ts}\"}" >> "${panel_dir}/.status"
     fi
 }
 
 # --- Time estimation ---
 estimate_time() {
-    local personas="$1" exercises="${2:-1}" concurrency="${3:-5}"
+    local personas="$1" studies="${2:-1}" concurrency="${3:-5}" extra_search_dir="${4:-}"
 
     # Try to get historical averages from past .status files
     local avg_gen_per_persona=90  # seconds, baseline
@@ -62,7 +65,7 @@ estimate_time() {
     local avg_analysis=120
     local avg_cross_synth=180
 
-    # Search for historical data in output/
+    # Search for historical data in output/ (and --output-dir if provided)
     local history_file
     history_file=$(mktemp "${TMPDIR:-/tmp}/facet-history-XXXXXXXX")
     python3 -c "
@@ -71,39 +74,45 @@ from datetime import datetime
 
 durations = {'generate': [], 'simulate': [], 'analyze': [], 'cross-synthesize': []}
 
-for status_file in glob.glob('${SCRIPT_DIR}/output/**/.status', recursive=True):
-    phases = {}
-    try:
-        with open(status_file) as f:
-            for line in f:
-                line = line.strip()
-                if not line: continue
-                obj = json.loads(line)
-                phase = obj.get('phase', '')
-                status = obj.get('status', '')
-                ts = obj.get('timestamp', '')
-                count = obj.get('count', 0)
-                if ts and phase:
-                    key = (phase, status)
-                    phases[key] = {'ts': ts, 'count': count}
-    except (json.JSONDecodeError, IOError):
-        continue
+search_paths = ['${SCRIPT_DIR}/output/**/.status']
+extra = '${extra_search_dir}'
+if extra:
+    search_paths.append(extra + '/**/.status')
 
-    for phase_name in durations:
-        started = phases.get((phase_name, 'started'))
-        completed = phases.get((phase_name, 'complete'))
-        if started and completed:
-            try:
-                t1 = datetime.fromisoformat(started['ts'].replace('Z', '+00:00'))
-                t2 = datetime.fromisoformat(completed['ts'].replace('Z', '+00:00'))
-                dur = (t2 - t1).total_seconds()
-                count = completed.get('count', 1)
-                if dur > 0 and count > 0 and phase_name in ('generate', 'simulate'):
-                    durations[phase_name].append(dur / count)
-                elif dur > 0:
-                    durations[phase_name].append(dur)
-            except (ValueError, TypeError):
-                pass
+for pattern in search_paths:
+    for status_file in glob.glob(pattern, recursive=True):
+        phases = {}
+        try:
+            with open(status_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line: continue
+                    obj = json.loads(line)
+                    phase = obj.get('phase', '')
+                    status = obj.get('status', '')
+                    ts = obj.get('timestamp', '')
+                    count = obj.get('count', 0)
+                    if ts and phase:
+                        key = (phase, status)
+                        phases[key] = {'ts': ts, 'count': count}
+        except (json.JSONDecodeError, IOError):
+            continue
+
+        for phase_name in durations:
+            started = phases.get((phase_name, 'started'))
+            completed = phases.get((phase_name, 'complete'))
+            if started and completed:
+                try:
+                    t1 = datetime.fromisoformat(started['ts'].replace('Z', '+00:00'))
+                    t2 = datetime.fromisoformat(completed['ts'].replace('Z', '+00:00'))
+                    dur = (t2 - t1).total_seconds()
+                    count = completed.get('count', 1)
+                    if dur > 0 and count > 0 and phase_name in ('generate', 'simulate'):
+                        durations[phase_name].append(dur / count)
+                    elif dur > 0:
+                        durations[phase_name].append(dur)
+                except (ValueError, TypeError):
+                    pass
 
 for phase_name, vals in durations.items():
     if vals:
@@ -127,18 +136,61 @@ for phase_name, vals in durations.items():
     local gen_time=$(( waves * avg_gen_per_persona ))  # wave-serial, not fully parallel
     local sim_time_per_ex=$(( (personas + concurrency - 1) / concurrency * avg_sim_per_persona ))
     local analysis_time_per_ex="$avg_analysis"
-    local total_exercise_time=$(( exercises * (sim_time_per_ex + analysis_time_per_ex) ))
-    local total=$(( gen_time + total_exercise_time + avg_cross_synth ))
+    local total_study_time=$(( studies * (sim_time_per_ex + analysis_time_per_ex) ))
+    local total=$(( gen_time + total_study_time + avg_cross_synth ))
 
     # Format as minutes
     local minutes=$(( (total + 59) / 60 ))
-    echo "Estimated time: ~${minutes} min (${personas} personas, ${exercises} exercises, concurrency ${concurrency})"
+    echo "Estimated time: ~${minutes} min (${personas} personas, ${studies} studies, concurrency ${concurrency})"
+}
+
+# --- Template version-locking ---
+ensure_version_locked_template() {
+    local source="$1"
+    local destination="$2"
+
+    if [ ! -f "$destination" ]; then
+        cp "$source" "$destination"
+    fi
+}
+
+version_lock_study_templates() {
+    local panel_dir="$1"
+
+    mkdir -p "${panel_dir}/.templates"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/plan.md" "${panel_dir}/.templates/plan.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/persona.md" "${panel_dir}/.templates/persona.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/cross-synthesis.md" "${panel_dir}/.templates/cross-synthesis.md"
+}
+
+version_lock_study_phase_templates() {
+    local study_dir="$1"
+    local study_type="${2:-}"
+
+    mkdir -p "${study_dir}/.templates"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/simulation.md" "${study_dir}/.templates/simulation.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/analysis.md" "${study_dir}/.templates/analysis.md"
+
+    if [ -n "$study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
+        ensure_version_locked_template "${SCRIPT_DIR}/study-types/${study_type}.md" "${study_dir}/.templates/${study_type}.md"
+    fi
+}
+
+# --- Clean run directories for fresh stability runs ---
+prepare_run_outputs() {
+    local simulations_dir="$1"
+    local logs_dir="$2"
+
+    mkdir -p "$simulations_dir"
+    mkdir -p "$logs_dir"
+    find "$simulations_dir" -maxdepth 1 -type f -name 'persona-*.md' -delete
+    find "$logs_dir" -maxdepth 1 -type f -name 'persona-*.log' -delete
 }
 
 # --- Phase: Plan ---
 run_plan() {
     local config="$1"
-    local study_dir="$2"
+    local panel_dir="$2"
     local calibration="${3:-}"
 
     local segments per_segment
@@ -169,7 +221,7 @@ reflect patterns found in this data, not just LLM training priors."
     fi
 
     echo ""
-    update_status "$study_dir" "plan" "started"
+    update_status "$panel_dir" "plan" "started"
 
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  PHASE 1: PLANNING                            ║"
@@ -192,7 +244,7 @@ reflect patterns found in this data, not just LLM training priors."
 
 Read these files for context:
 1. Product config: ${config}
-2. Planning template (follow these instructions): ${study_dir}/.templates/plan.md
+2. Planning template (follow these instructions): ${panel_dir}/.templates/plan.md
 
 Key parameters:
 - Segments to create: ${segments}
@@ -200,17 +252,17 @@ Key parameters:
 - Total personas: $((segments * per_segment))
 ${calibration_instruction}
 Follow the instructions in the planning template exactly.
-Write the complete plan to: ${study_dir}/plan.md" \
+Write the complete plan to: ${panel_dir}/plan.md" \
         2>&1 | $STREAM_FILTER
 
-    if [ ! -s "${study_dir}/plan.md" ]; then
+    if [ ! -s "${panel_dir}/plan.md" ]; then
         echo "ERROR: Plan was not generated."
-        exit 1
+        return 1
     fi
 
     echo ""
-    echo "Plan written to ${study_dir}/plan.md"
-    update_status "$study_dir" "plan" "complete"
+    echo "Plan written to ${panel_dir}/plan.md"
+    update_status "$panel_dir" "plan" "complete"
 }
 
 # --- Extract one-line summary from a persona file ---
@@ -230,14 +282,14 @@ extract_persona_summary() {
 # --- Phase: Generate Persona Backgrounds (wave-based) ---
 run_generate() {
     local config="$1"
-    local study_dir="$2"
+    local panel_dir="$2"
     local concurrency="${3:-5}"
     local calibration="${4:-}"
     local wave_size=5
 
-    if [ ! -f "${study_dir}/plan.md" ]; then
-        echo "ERROR: No plan found at ${study_dir}/plan.md. Run 'init' first."
-        exit 1
+    if [ ! -f "${panel_dir}/plan.md" ]; then
+        echo "ERROR: No plan found at ${panel_dir}/plan.md. Run 'init' first."
+        return 1
     fi
 
     # Count total personas from config
@@ -248,10 +300,10 @@ run_generate() {
 
     local wave_count=$(( (total + wave_size - 1) / wave_size ))
 
-    mkdir -p "${study_dir}/personas"
-    mkdir -p "${study_dir}/logs"
+    mkdir -p "${panel_dir}/personas"
+    mkdir -p "${panel_dir}/logs"
 
-    update_status "$study_dir" "generate" "started" "0" "$total"
+    update_status "$panel_dir" "generate" "started" "0" "$total"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -287,7 +339,7 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
         for i in $(seq "$wave_start" "$wave_end"); do
             local padded
             padded=$(printf '%03d' "$i")
-            local output_path="${study_dir}/personas/persona-${padded}.md"
+            local output_path="${panel_dir}/personas/persona-${padded}.md"
 
             # Skip if already generated
             if [ -s "$output_path" ]; then
@@ -295,7 +347,7 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
                 continue
             fi
 
-            local log_file="${study_dir}/logs/persona-${padded}.log"
+            local log_file="${panel_dir}/logs/persona-${padded}.log"
 
             # Build calibration context for persona generation
             local persona_calibration=""
@@ -326,8 +378,8 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
 
 Read these files for context:
 1. Product config: ${config}
-2. Study plan (segment matrix, persona outlines, name registry, cross-references): ${study_dir}/plan.md
-3. Persona template (follow these instructions): ${study_dir}/.templates/persona.md
+2. Study plan (segment matrix, persona outlines, name registry, cross-references): ${panel_dir}/plan.md
+3. Persona template (follow these instructions): ${panel_dir}/.templates/persona.md
 ${persona_calibration}
 You are generating persona number ${i} (persona-${padded}).
 Find persona #${i} in the plan's persona outlines and generate a full persona BACKGROUND for that outline.
@@ -361,7 +413,7 @@ Write the complete persona background to: ${output_path}" \
         for i in $(seq "$wave_start" "$wave_end"); do
             local padded
             padded=$(printf '%03d' "$i")
-            local pfile="${study_dir}/personas/persona-${padded}.md"
+            local pfile="${panel_dir}/personas/persona-${padded}.md"
             if [ -s "$pfile" ]; then
                 generated_summaries="${generated_summaries}
 $(extract_persona_summary "$pfile")"
@@ -372,7 +424,7 @@ $(extract_persona_summary "$pfile")"
     done
 
     local completed
-    completed=$(count_files "${study_dir}/personas" "persona-*.md")
+    completed=$(count_files "${panel_dir}/personas" "persona-*.md")
     local failed=$((total - completed))
 
     echo ""
@@ -387,7 +439,7 @@ $(extract_persona_summary "$pfile")"
     echo "Persona Validation Summary:"
     local dealbreaker_count=0
     local behecon_count=0
-    for f in "${study_dir}/personas"/persona-*.md; do
+    for f in "${panel_dir}/personas"/persona-*.md; do
         [ -f "$f" ] || continue
         if grep -qi "deal-breaker\|deal_breaker\|dealbreaker" "$f" 2>/dev/null; then
             ((dealbreaker_count++)) || true
@@ -402,56 +454,59 @@ $(extract_persona_summary "$pfile")"
         echo "  WARNING: <25% of personas mention deal-breakers. Diversity may be insufficient."
     fi
 
-    update_status "$study_dir" "generate" "complete" "$completed" "$total"
+    update_status "$panel_dir" "generate" "complete" "$completed" "$total"
 }
 
 # --- Phase: Simulate (per-persona, parallel) ---
 run_simulate() {
-    local study_dir="$1"
-    local exercise_config="$2"
-    local exercise_dir="$3"
+    local panel_dir="$1"
+    local study_config="$2"
+    local study_dir="$3"
     local concurrency="${4:-5}"
+    local simulations_dir="${5:-${study_dir}/simulations}"
+    local logs_dir="${6:-${study_dir}/logs}"
 
-    local exercise_name study_type
-    exercise_name=$(parse_frontmatter "$exercise_config" "exercise_name")
-    study_type=$(parse_frontmatter "$exercise_config" "study_type")
+    local study_name study_type
+    study_name=$(parse_frontmatter "$study_config" "study_name")
+    study_type=$(parse_frontmatter "$study_config" "study_type")
 
-    mkdir -p "${exercise_dir}/simulations"
-    mkdir -p "${exercise_dir}/logs"
+    mkdir -p "$simulations_dir"
+    mkdir -p "$logs_dir"
 
     # Count personas
     local total
-    total=$(count_files "${study_dir}/personas" "persona-*.md")
+    total=$(count_files "${panel_dir}/personas" "persona-*.md")
 
     if [ "$total" -eq 0 ]; then
-        echo "ERROR: No personas found in ${study_dir}/personas/. Run 'init' first."
-        exit 1
+        echo "ERROR: No personas found in ${panel_dir}/personas/. Run 'init' first."
+        return 1
     fi
 
-    update_status "$exercise_dir" "simulate" "started" "0" "$total"
+    update_status "$study_dir" "simulate" "started" "0" "$total"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
-    echo "║  SIMULATING: ${exercise_name}"
+    echo "║  SIMULATING: ${study_name}"
     echo "║  Personas: ${total}, Concurrency: ${concurrency}                 ║"
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
     local running=0
 
-    for persona_file in "${study_dir}/personas"/persona-*.md; do
+    for persona_file in "${panel_dir}/personas"/persona-*.md; do
         local base_name
         base_name=$(basename "$persona_file" .md)
         local padded="${base_name#persona-}"
-        local output_path="${exercise_dir}/simulations/${base_name}.md"
+        local output_path="${simulations_dir}/${base_name}.md"
+        local summary_path="${simulations_dir}/${base_name}-summary.md"
 
-        # Skip if already generated
-        if [ -s "$output_path" ]; then
-            echo "  skip: ${base_name}.md (already exists)"
+        # Skip if both simulation and summary already exist
+        if [ -s "$output_path" ] && [ -s "$summary_path" ]; then
+            echo "  skip: ${base_name}.md (simulation + summary exist)"
             continue
         fi
 
-        local log_file="${exercise_dir}/logs/${base_name}.log"
+        local log_file="${logs_dir}/${base_name}.log"
 
         # Launch in background
         (
@@ -460,18 +515,19 @@ run_simulate() {
                 --max-turns 15 \
                 --model sonnet \
                 --allowedTools "Read,Write" \
-                -p "You are simulating persona ${base_name} through an exercise for a behavioral simulation study.
+                -p "You are simulating persona ${base_name} through a study for a behavioral simulation.
 
 Read these files for context:
 1. Persona background: ${persona_file}
-2. Exercise config (options to test): ${exercise_config}
-3. Simulation template (follow these instructions): ${exercise_dir}/.templates/simulation.md
-4. Study type simulation rules: ${exercise_dir}/.templates/${study_type}.md
+2. Exercise config (options to test): ${study_config}
+3. Simulation template (follow these instructions): ${study_dir}/.templates/simulation.md
+4. Study type simulation rules: ${study_dir}/.templates/${study_type}.md
 
-Generate this persona's reactions to the options defined in the exercise config.
+Generate this persona's reactions to the options defined in the study config.
 Stay completely in character — use the persona's voice, vocabulary, and decision-making patterns from their background.
 
-Write the simulation to: ${output_path}" \
+Write the full simulation to: ${output_path}
+Also write the structured summary (see the STRUCTURED SUMMARY section in the simulation template) to: ${summary_path}" \
                 2>&1 | tee "$log_file" | $STREAM_FILTER
 
             if [ -s "$output_path" ]; then
@@ -493,26 +549,53 @@ Write the simulation to: ${output_path}" \
     wait
 
     local completed
-    completed=$(count_files "${exercise_dir}/simulations" "persona-*.md")
+    completed=$(count_files "$simulations_dir" "persona-*.md")
+    # Exclude summary files from simulation count
+    local summary_count
+    summary_count=$(count_files "$simulations_dir" "persona-*-summary.md")
+    completed=$((completed - summary_count))
     local failed=$((total - completed))
 
     echo ""
     echo "Simulation complete: ${completed}/${total} personas (${failed} failed)"
+    echo "Summaries written: ${summary_count}/${total}"
 
     if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -gt 20 ]; then
         echo "WARNING: >20% failure rate. Consider re-running simulations."
     fi
 
-    update_status "$exercise_dir" "simulate" "complete" "$completed" "$total"
+    update_status "$study_dir" "simulate" "complete" "$completed" "$total"
 }
 
 # --- Phase: Analyze (single call — synthesis + artifacts + counterargument) ---
 run_analyze() {
-    local study_dir="$1"
-    local exercise_config="$2"
-    local exercise_dir="$3"
+    local panel_dir="$1"
+    local study_config="$2"
+    local study_dir="$3"
 
-    update_status "$exercise_dir" "analyze" "started"
+    update_status "$study_dir" "analyze" "started"
+
+    # Determine whether to use simulation summaries (context engineering)
+    # Use summaries when >12 personas AND summary files exist
+    local persona_count
+    persona_count=$(count_files "${panel_dir}/personas" "persona-*.md")
+    local summary_count
+    summary_count=$(count_files "${study_dir}/simulations" "persona-*-summary.md")
+
+    local simulation_instruction
+    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ]; then
+        simulation_instruction="Then read ALL simulation SUMMARY files in: ${study_dir}/simulations/ (files matching persona-*-summary.md)
+These are structured extractions containing verdicts, key quotes, quantitative data, and behavioral economics analysis.
+If you need full simulation detail for a specific persona (e.g., for the Key Personas section or counterargument), read their full simulation file (persona-NNN.md without the -summary suffix)."
+        echo "  Using simulation summaries (${summary_count} available, ${persona_count} personas)"
+    else
+        simulation_instruction="Then read ALL simulation files in: ${study_dir}/simulations/"
+        if [ "$persona_count" -le 12 ]; then
+            echo "  Reading full simulations (${persona_count} personas, under threshold)"
+        else
+            echo "  Reading full simulations (no summaries available)"
+        fi
+    fi
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -524,62 +607,146 @@ run_analyze() {
     claude --print --verbose --output-format stream-json \
         --max-turns 50 \
         --allowedTools "Read,Write,Glob,Grep" \
-        -p "You are running the Analysis phase of a Facet behavioral simulation exercise.
+        -p "You are running the Analysis phase of a Facet behavioral simulation study.
 
 Read these files for context:
-1. Exercise config: ${exercise_config}
-2. Analysis template (follow these instructions): ${exercise_dir}/.templates/analysis.md
+1. Exercise config: ${study_config}
+2. Analysis template (follow these instructions): ${study_dir}/.templates/analysis.md
 
-Then read ALL persona background files in: ${study_dir}/personas/
-Then read ALL simulation files in: ${exercise_dir}/simulations/
+Then read ALL persona background files in: ${panel_dir}/personas/
+${simulation_instruction}
 
 Follow the analysis template to produce a comprehensive analysis.
-Write the synthesis to: ${exercise_dir}/synthesis.md
-Write the artifacts to: ${exercise_dir}/artifacts.md" \
+Write the synthesis to: ${study_dir}/synthesis.md
+Write the artifacts to: ${study_dir}/artifacts.md" \
         2>&1 | $STREAM_FILTER
 
-    if [ ! -s "${exercise_dir}/synthesis.md" ]; then
+    if [ ! -s "${study_dir}/synthesis.md" ]; then
         echo "ERROR: Synthesis was not generated."
-        exit 1
+        return 1
     fi
 
-    if [ ! -s "${exercise_dir}/artifacts.md" ]; then
+    if [ ! -s "${study_dir}/artifacts.md" ]; then
         echo "WARNING: Artifacts file was not generated separately. Check synthesis.md for embedded artifacts."
     fi
 
-    update_status "$exercise_dir" "analyze" "complete"
+    update_status "$study_dir" "analyze" "complete"
+
+    # Run spot-check verification if synthesis was generated and summaries were used
+    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ] && [ -s "${study_dir}/synthesis.md" ]; then
+        run_spot_check "$panel_dir" "$study_dir" "$persona_count"
+    fi
 }
 
-# --- Phase: Cross-Synthesis (single call — unified analysis across exercises) ---
-run_cross_synthesize() {
-    local study_dir="$1"
+# --- Phase: Spot-Check Verification ---
+run_spot_check() {
+    local panel_dir="$1"
+    local study_dir="$2"
+    local persona_count="$3"
+    local check_count=5
+    [ "$persona_count" -lt 10 ] && check_count=3
 
-    # Discover exercises with completed synthesis and artifacts
+    echo ""
+    echo "  Running spot-check verification (${check_count} personas)..."
+
+    # Pick random persona IDs using study directory name as seed for determinism
+    local seed
+    seed=$(echo "$(basename "$panel_dir")$(basename "$study_dir")" | cksum | cut -d' ' -f1)
+    local selected
+    selected=$(python3 -c "
+import random
+random.seed(${seed})
+ids = random.sample(range(1, ${persona_count} + 1), min(${check_count}, ${persona_count}))
+for i in ids:
+    print(f'{i:03d}')
+")
+
+    # Build file lists for the spot-check prompt
+    local check_files=""
+    for padded in $selected; do
+        local persona_file="${panel_dir}/personas/persona-${padded}.md"
+        local sim_file="${study_dir}/simulations/persona-${padded}.md"
+        local summary_file="${study_dir}/simulations/persona-${padded}-summary.md"
+        if [ -f "$persona_file" ] && [ -f "$sim_file" ]; then
+            check_files="${check_files}
+- Persona background: ${persona_file}
+- Full simulation: ${sim_file}"
+            [ -f "$summary_file" ] && check_files="${check_files}
+- Simulation summary: ${summary_file}"
+        fi
+    done
+
+    if [ -z "$check_files" ]; then
+        echo "  WARN: No persona files found for spot-check. Skipping."
+        return 0
+    fi
+
+    FACET_PHASE="Spot-check verification" \
+    claude --print --verbose --output-format stream-json \
+        --max-turns 15 \
+        --allowedTools "Read,Write,Grep" \
+        -p "You are verifying the accuracy of a synthesis document by spot-checking specific personas.
+
+Read the synthesis: ${study_dir}/synthesis.md
+
+Then for each persona below, read their full files and verify:
+1. Do synthesis claims about this persona match the source data?
+2. Are quoted statements accurate?
+3. Are quantitative figures (NPS, revenue, retention) correct?
+4. Is the persona's verdict correctly attributed?
+${check_files}
+
+Write a verification report to: ${study_dir}/verification.md
+
+Format:
+# Spot-Check Verification
+
+Checked personas: [list IDs]
+
+## Per-Persona Results
+For each persona: PASS or DISCREPANCY with specific details.
+
+## Overall
+[X/Y personas verified. Summary of any discrepancies found.]" \
+        2>&1 | $STREAM_FILTER
+
+    if [ -s "${study_dir}/verification.md" ]; then
+        echo "  Verification written to ${study_dir}/verification.md"
+    else
+        echo "  WARN: Verification was not generated."
+    fi
+}
+
+# --- Phase: Cross-Synthesis (single call — unified analysis across studies) ---
+run_cross_synthesize() {
+    local panel_dir="$1"
+
+    # Discover studies with completed synthesis and artifacts
     local synthesis_files=()
     local artifacts_files=()
-    for f in "${study_dir}/exercises"/*/synthesis.md; do
+    for f in "${panel_dir}/studies"/*/synthesis.md; do
         [ -f "$f" ] && synthesis_files+=("$f")
     done
-    for f in "${study_dir}/exercises"/*/artifacts.md; do
+    for f in "${panel_dir}/studies"/*/artifacts.md; do
         [ -f "$f" ] && artifacts_files+=("$f")
     done
 
     if [ "${#synthesis_files[@]}" -eq 0 ]; then
-        echo "ERROR: No synthesis files found in ${study_dir}/exercises/*/. Run exercises first."
-        exit 1
+        echo "ERROR: No synthesis files found in ${panel_dir}/studies/*/. Run studies first."
+        return 1
     fi
 
-    local exercise_count="${#synthesis_files[@]}"
+    local study_count="${#synthesis_files[@]}"
 
     # Count personas
     local persona_count
-    persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+    persona_count=$(count_files "${panel_dir}/personas" "persona-*.md")
 
     # Build persona context: summaries if >30, full paths if <=30
     local persona_instruction
     if [ "$persona_count" -gt 30 ]; then
         local summaries=""
-        for pfile in "${study_dir}/personas"/persona-*.md; do
+        for pfile in "${panel_dir}/personas"/persona-*.md; do
             [ -f "$pfile" ] || continue
             summaries="${summaries}
 $(extract_persona_summary "$pfile")"
@@ -589,85 +756,88 @@ ${summaries}
 
 For persona arc tracking, use these summaries to identify personas by name and number."
     else
-        persona_instruction="Read ALL persona background files in: ${study_dir}/personas/
+        persona_instruction="Read ALL persona background files in: ${panel_dir}/personas/
 Use full persona backgrounds for arc tracking."
     fi
 
     echo ""
-    update_status "$study_dir" "cross-synthesize" "started"
+    update_status "$panel_dir" "cross-synthesize" "started"
 
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  CROSS-EXERCISE SYNTHESIS                      ║"
-    echo "║  Exercises: ${exercise_count}, Personas: ${persona_count}                    ║"
+    echo "║  Exercises: ${study_count}, Personas: ${persona_count}                    ║"
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
-    # Version-lock the cross-synthesis template
-    cp "${SCRIPT_DIR}/templates/cross-synthesis.md" "${study_dir}/.templates/" 2>/dev/null || true
+    mkdir -p "${panel_dir}/.templates"
+    local cross_synthesis_template="${panel_dir}/.templates/cross-synthesis.md"
+    if [ ! -f "$cross_synthesis_template" ]; then
+        ensure_version_locked_template "${SCRIPT_DIR}/templates/cross-synthesis.md" "$cross_synthesis_template"
+    fi
 
-    FACET_PHASE="Cross-synthesis: ${exercise_count} exercises" \
+    FACET_PHASE="Cross-synthesis: ${study_count} studies" \
     claude --print --verbose --output-format stream-json \
         --max-turns 50 \
         --allowedTools "Read,Write,Glob,Grep" \
         -p "You are running the Cross-Exercise Synthesis phase of a Facet behavioral simulation study.
 
 Read these files for context:
-1. Cross-synthesis template (follow these instructions): ${study_dir}/.templates/cross-synthesis.md
+1. Cross-synthesis template (follow these instructions): ${cross_synthesis_template}
 
-Then read ALL per-exercise synthesis files:
+Then read ALL per-study synthesis files:
 $(for f in "${synthesis_files[@]}"; do echo "- $f"; done)
 
-Then read ALL per-exercise artifacts files:
+Then read ALL per-study artifacts files:
 $(for f in "${artifacts_files[@]}"; do echo "- $f"; done)
 
 ${persona_instruction}
 
-Produce a unified cross-exercise synthesis connecting findings across all ${exercise_count} exercises.
-Write the cross-synthesis to: ${study_dir}/cross-synthesis.md" \
+Produce a unified cross-study synthesis connecting findings across all ${study_count} studies.
+Write the cross-synthesis to: ${panel_dir}/cross-synthesis.md" \
         2>&1 | $STREAM_FILTER
 
-    if [ ! -s "${study_dir}/cross-synthesis.md" ]; then
+    if [ ! -s "${panel_dir}/cross-synthesis.md" ]; then
         echo "ERROR: Cross-synthesis was not generated."
-        exit 1
+        return 1
     fi
 
     echo ""
-    echo "Cross-synthesis written to ${study_dir}/cross-synthesis.md"
-    update_status "$study_dir" "cross-synthesize" "complete"
+    echo "Cross-synthesis written to ${panel_dir}/cross-synthesis.md"
+    update_status "$panel_dir" "cross-synthesize" "complete"
 }
 
 # --- Show status ---
 show_status() {
-    local study_dir="$1"
-    local status_file="${study_dir}/.status"
+    local panel_dir="$1"
+    local status_file="${panel_dir}/.status"
 
     echo ""
-    echo "Study: $(basename "$study_dir")"
+    echo "Study: $(basename "$panel_dir")"
     echo "---"
 
     # Persona count
     local persona_count=0
-    if [ -d "${study_dir}/personas" ]; then
-        persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+    if [ -d "${panel_dir}/personas" ]; then
+        persona_count=$(count_files "${panel_dir}/personas" "persona-*.md")
     fi
     echo "Personas generated: ${persona_count}"
 
-    # List exercises
-    if [ -d "${study_dir}/exercises" ]; then
+    # List studies
+    if [ -d "${panel_dir}/studies" ]; then
         echo ""
         echo "Exercises:"
-        for exercise in "${study_dir}/exercises"/*/; do
-            if [ -d "$exercise" ]; then
+        for study_entry in "${panel_dir}/studies"/*/; do
+            if [ -d "$study_entry" ]; then
                 local ename
-                ename=$(basename "$exercise")
+                ename=$(basename "$study_entry")
                 local sim_count=0
-                if [ -d "${exercise}/simulations" ]; then
-                    sim_count=$(count_files "${exercise}/simulations" "persona-*.md")
+                if [ -d "${study_entry}/simulations" ]; then
+                    sim_count=$(count_files "${study_entry}/simulations" "persona-*.md")
                 fi
                 local has_synthesis="no"
-                [ -f "${exercise}/synthesis.md" ] && has_synthesis="yes"
+                [ -f "${study_entry}/synthesis.md" ] && has_synthesis="yes"
                 local has_artifacts="no"
-                [ -f "${exercise}/artifacts.md" ] && has_artifacts="yes"
+                [ -f "${study_entry}/artifacts.md" ] && has_artifacts="yes"
                 echo "  ${ename}: ${sim_count} simulations, synthesis: ${has_synthesis}, artifacts: ${has_artifacts}"
             fi
         done
@@ -676,20 +846,20 @@ show_status() {
     fi
 
     # Cross-synthesis status
-    if [ -f "${study_dir}/cross-synthesis.md" ]; then
+    if [ -f "${panel_dir}/cross-synthesis.md" ]; then
         local cs_lines
-        cs_lines=$(wc -l < "${study_dir}/cross-synthesis.md" | tr -d ' ')
+        cs_lines=$(wc -l < "${panel_dir}/cross-synthesis.md" | tr -d ' ')
         echo ""
         echo "Cross-synthesis: yes (${cs_lines} lines)"
-    elif [ -d "${study_dir}/exercises" ]; then
+    elif [ -d "${panel_dir}/studies" ]; then
         local synth_count=0
-        for f in "${study_dir}/exercises"/*/synthesis.md; do
+        for f in "${panel_dir}/studies"/*/synthesis.md; do
             [ -f "$f" ] && ((synth_count++)) || true
         done
         if [ "$synth_count" -gt 0 ]; then
             echo ""
-            echo "Cross-synthesis: not yet (${synth_count} exercise syntheses ready)"
-            echo "  Run: ./sim.sh synthesize --study ${study_dir}"
+            echo "Cross-synthesis: not yet (${synth_count} study syntheses ready)"
+            echo "  Run: ./sim.sh synthesize --panel ${panel_dir}"
         fi
     fi
 
@@ -710,13 +880,13 @@ for line in sys.stdin:
 " < "$status_file"
     fi
 
-    # Also show exercise-level status
-    if [ -d "${study_dir}/exercises" ]; then
-        for exercise in "${study_dir}/exercises"/*/; do
-            local estatus="${exercise}.status"
+    # Also show study-level status
+    if [ -d "${panel_dir}/studies" ]; then
+        for study_entry in "${panel_dir}/studies"/*/; do
+            local estatus="${study_entry}.status"
             if [ -f "$estatus" ]; then
                 echo ""
-                echo "  Exercise: $(basename "$exercise")"
+                echo "  Study: $(basename "$study_entry")"
                 python3 -c "
 import json, sys
 for line in sys.stdin:
@@ -735,9 +905,9 @@ for line in sys.stdin:
     echo ""
     echo "Output files:"
     for f in plan.md cross-synthesis.md; do
-        if [ -f "${study_dir}/$f" ]; then
+        if [ -f "${panel_dir}/$f" ]; then
             local lines
-            lines=$(wc -l < "${study_dir}/$f" | tr -d ' ')
+            lines=$(wc -l < "${panel_dir}/$f" | tr -d ' ')
             echo "  + $f (${lines} lines)"
         else
             echo "  - $f"
@@ -750,21 +920,27 @@ main() {
     local cmd="${1:-help}"
     shift || true
 
-    local config="" study_dir="" study_dir2="" study_name="" concurrency="5" calibration="" continue_on_error="false" runs="1"
+    local config="" panel_dir="" panel_dir2="" study_name="" concurrency="5" calibration="" continue_on_error="false" runs="1" output_dir=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
             --config) config="$2"; shift 2 ;;
-            --study) study_dir="$2"; shift 2 ;;
-            --study2) study_dir2="$2"; shift 2 ;;
+            --panel) panel_dir="$2"; shift 2 ;;
+            --panel2) panel_dir2="$2"; shift 2 ;;
             --name) study_name="$2"; shift 2 ;;
             --concurrency) concurrency="$2"; shift 2 ;;
             --calibration) calibration="$2"; shift 2 ;;
             --continue-on-error) continue_on_error="true"; shift ;;
             --runs) runs="$2"; shift 2 ;;
+            --output-dir) output_dir="$2"; shift 2 ;;
             *) echo "Unknown argument: $1"; exit 1 ;;
         esac
     done
+
+    # Resolve output_dir to absolute path
+    if [ -n "$output_dir" ] && [[ "$output_dir" != /* ]]; then
+        output_dir="$(cd "$output_dir" 2>/dev/null && pwd || echo "$output_dir")"
+    fi
 
     # Validate calibration path if provided (file or directory)
     local cal_file_count=0
@@ -796,31 +972,45 @@ main() {
         config="${SCRIPT_DIR}/${config}"
     fi
 
-    # Derive study_dir from config if not provided
-    if [ -z "$study_dir" ] && [ -n "$config" ]; then
+    # Derive panel_dir from config if not provided
+    if [ -z "$panel_dir" ] && [ -n "$config" ]; then
         if [ -z "$study_name" ]; then
-            study_name=$(basename "$config" .md)
-            # Strip common suffixes for cleaner directory names
-            study_name="${study_name%-product}"
+            # Try to extract a study_name field from the config frontmatter
+            study_name=$(parse_frontmatter "$config" "study_name" 2>/dev/null || true)
+            if [ -z "$study_name" ]; then
+                study_name=$(basename "$config" .md)
+                # Strip common suffixes for cleaner directory names
+                study_name="${study_name%-product}"
+                study_name="${study_name%-config}"
+                study_name="${study_name%-study}"
+            fi
         fi
-        study_dir="${SCRIPT_DIR}/output/${study_name}"
+        local base_dir="${output_dir:-${SCRIPT_DIR}/output}"
+        panel_dir="${base_dir}/${study_name}"
     fi
 
-    # Resolve study_dir to absolute path
-    if [ -n "$study_dir" ] && [[ "$study_dir" != /* ]]; then
-        study_dir="${SCRIPT_DIR}/${study_dir}"
+    # Resolve panel_dir to absolute path
+    if [ -n "$panel_dir" ] && [[ "$panel_dir" != /* ]]; then
+        panel_dir="${SCRIPT_DIR}/${panel_dir}"
     fi
 
     case "$cmd" in
         init)
             [ -z "$config" ] && { echo "Usage: ./sim.sh init --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"; exit 1; }
-            mkdir -p "${study_dir}/personas"
+
+            # Overwrite protection: refuse to init into a directory with existing study data
+            if [ -f "${panel_dir}/plan.md" ]; then
+                echo "ERROR: Study already exists at ${panel_dir}/"
+                echo "  Existing plan: ${panel_dir}/plan.md"
+                echo "  To re-run, use a different --name or delete the existing study."
+                exit 1
+            fi
+
+            mkdir -p "${panel_dir}/personas"
 
             # Version-lock init-phase templates
-            mkdir -p "${study_dir}/.templates"
-            cp "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/"
-            cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
-            echo "Templates version-locked to ${study_dir}/.templates/"
+            version_lock_study_templates "$panel_dir"
+            echo "Templates version-locked to ${panel_dir}/.templates/"
 
             local total_personas
             total_personas=$(( $(parse_frontmatter "$config" "segments") * $(parse_frontmatter "$config" "personas_per_segment") ))
@@ -828,7 +1018,7 @@ main() {
             echo ""
             echo "FACET SIMULATION ENGINE v2"
             echo "Config: $(basename "$config")"
-            echo "Output: ${study_dir}"
+            echo "Output: ${panel_dir}"
             if [ -n "$calibration" ]; then
                 if [ -d "$calibration" ]; then
                     echo "Calibration: $(basename "$calibration")/ (${cal_file_count} files)"
@@ -836,58 +1026,54 @@ main() {
                     echo "Calibration: $(basename "$calibration")"
                 fi
             fi
-            estimate_time "$total_personas" 0 "$concurrency"
+            estimate_time "$total_personas" 0 "$concurrency" "$output_dir"
             echo ""
-            run_plan "$config" "$study_dir" "$calibration"
-            run_generate "$config" "$study_dir" "$concurrency" "$calibration"
+            run_plan "$config" "$panel_dir" "$calibration"
+            run_generate "$config" "$panel_dir" "$concurrency" "$calibration"
             echo ""
-            echo "INIT COMPLETE — personas ready for exercises"
-            echo "Output: ${study_dir}/"
+            echo "INIT COMPLETE — panel ready for studies"
+            echo "Output: ${panel_dir}/"
             echo ""
-            echo "Next: ./sim.sh exercise --study ${study_dir} --config <exercise-config>"
+            echo "Next: ./sim.sh study --panel ${panel_dir} --config <study-config>"
             ;;
-        exercise)
-            [ -z "$study_dir" ] && { echo "Usage: ./sim.sh exercise --study <dir> --config <exercise-config> [--concurrency N]"; exit 1; }
-            [ -z "$config" ] && { echo "Usage: ./sim.sh exercise --study <dir> --config <exercise-config> [--concurrency N]"; exit 1; }
+        study)
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh study --panel <dir> --config <study-config> [--concurrency N]"; exit 1; }
+            [ -z "$config" ] && { echo "Usage: ./sim.sh study --panel <dir> --config <study-config> [--concurrency N]"; exit 1; }
 
-            if [ ! -d "${study_dir}/personas" ]; then
-                echo "ERROR: No personas directory at ${study_dir}/personas/. Run 'init' first."
+            if [ ! -d "${panel_dir}/personas" ]; then
+                echo "ERROR: No personas directory at ${panel_dir}/personas/. Run 'init' first."
                 exit 1
             fi
 
-            local exercise_name
-            exercise_name=$(parse_frontmatter "$config" "exercise_name")
-            if [ -z "$exercise_name" ]; then
-                # Fallback: derive from config filename
-                exercise_name=$(basename "$config" .md)
+            local study_name
+            study_name=$(parse_frontmatter "$config" "study_name")
+            if [ -z "$study_name" ]; then
+                # Fallback: try study_name key, then derive from config filename
+                study_name=$(parse_frontmatter "$config" "study_name" 2>/dev/null || true)
+                [ -z "$study_name" ] && study_name=$(basename "$config" .md)
             fi
 
-            local exercise_dir="${study_dir}/exercises/${exercise_name}"
-            mkdir -p "${exercise_dir}/simulations"
+            local study_dir="${panel_dir}/studies/${study_name}"
+            mkdir -p "${study_dir}/simulations"
 
-            # Copy exercise config into the exercise directory for reference
-            cp "$config" "${exercise_dir}/exercise.md"
+            # Copy study config into the study directory for reference
+            cp "$config" "${study_dir}/study-config.md"
 
-            # Version-lock exercise-phase templates + study-type rules
+            # Version-lock study-phase templates + study-type rules
             local study_type
             study_type=$(parse_frontmatter "$config" "study_type")
-            mkdir -p "${exercise_dir}/.templates"
-            cp "${SCRIPT_DIR}/templates/simulation.md" "${exercise_dir}/.templates/"
-            cp "${SCRIPT_DIR}/templates/analysis.md" "${exercise_dir}/.templates/"
-            if [ -n "$study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
-                cp "${SCRIPT_DIR}/study-types/${study_type}.md" "${exercise_dir}/.templates/"
-            fi
-            echo "Templates version-locked to ${exercise_dir}/.templates/"
+            version_lock_study_phase_templates "$study_dir" "$study_type"
+            echo "Templates version-locked to ${study_dir}/.templates/"
 
             local ex_persona_count
-            ex_persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+            ex_persona_count=$(count_files "${panel_dir}/personas" "persona-*.md")
 
             echo ""
             echo "FACET SIMULATION ENGINE v2"
-            echo "Study: $(basename "$study_dir")"
-            echo "Exercise: ${exercise_name}"
+            echo "Study: $(basename "$panel_dir")"
+            echo "Study: ${study_name}"
             echo "Config: $(basename "$config")"
-            estimate_time "$ex_persona_count" 1 "$concurrency"
+            estimate_time "$ex_persona_count" 1 "$concurrency" "$output_dir"
             echo ""
 
             if [ "$runs" -gt 1 ]; then
@@ -896,144 +1082,131 @@ main() {
                 echo ""
 
                 for run_num in $(seq 1 "$runs"); do
-                    local run_sim_dir="${exercise_dir}/simulations"
+                    local run_sim_dir="${study_dir}/simulations"
+                    local run_log_dir="${study_dir}/logs"
                     if [ "$run_num" -gt 1 ]; then
-                        run_sim_dir="${exercise_dir}/simulations-run-${run_num}"
-                        mkdir -p "$run_sim_dir"
+                        run_sim_dir="${study_dir}/simulations-run-${run_num}"
+                        run_log_dir="${study_dir}/logs-run-${run_num}"
                     fi
 
                     echo "Run ${run_num}/${runs}:"
-
-                    # For runs > 1, temporarily swap simulations dir
-                    if [ "$run_num" -gt 1 ]; then
-                        local orig_sim_dir="${exercise_dir}/simulations"
-                        mv "$orig_sim_dir" "${exercise_dir}/simulations-run-1" 2>/dev/null || true
-                        mkdir -p "$orig_sim_dir"
-                    fi
-
-                    run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
-
-                    if [ "$run_num" -gt 1 ]; then
-                        # Move this run's results to its own directory
-                        mv "${exercise_dir}/simulations" "$run_sim_dir"
-                        # Restore run-1 as the main simulations dir
-                        mv "${exercise_dir}/simulations-run-1" "${exercise_dir}/simulations"
-                    fi
+                    prepare_run_outputs "$run_sim_dir" "$run_log_dir"
+                    run_simulate "$panel_dir" "$config" "$study_dir" "$concurrency" "$run_sim_dir" "$run_log_dir"
                 done
 
                 # Run analysis on the first run's simulations
-                run_analyze "$study_dir" "$config" "$exercise_dir"
+                run_analyze "$panel_dir" "$config" "$study_dir"
 
                 # Generate stability report
                 echo ""
                 echo "Generating stability report..."
 
                 local sim_dirs_list=""
-                sim_dirs_list="- ${exercise_dir}/simulations/"
+                sim_dirs_list="- ${study_dir}/simulations/"
                 for run_num in $(seq 2 "$runs"); do
                     sim_dirs_list="${sim_dirs_list}
-- ${exercise_dir}/simulations-run-${run_num}/"
+- ${study_dir}/simulations-run-${run_num}/"
                 done
 
                 FACET_PHASE="Stability report: ${runs} runs" \
                 claude --print --verbose --output-format stream-json \
                     --max-turns 30 \
                     --allowedTools "Read,Write,Glob,Grep" \
-                    -p "You are generating a stability report for a Facet simulation exercise.
+                    -p "You are generating a stability report for a Facet simulation study.
 
 Read these files for context:
 1. Stability template: ${SCRIPT_DIR}/templates/stability.md
 2. Exercise config: ${config}
 
-The exercise was run ${runs} times with the same personas. Read simulation files from each run:
+The study was run ${runs} times with the same personas. Read simulation files from each run:
 ${sim_dirs_list}
 
 Compare per-persona verdicts across runs.
-Write the stability report to: ${exercise_dir}/stability-report.md" \
+Write the stability report to: ${study_dir}/stability-report.md" \
                     2>&1 | $STREAM_FILTER
 
                 echo ""
                 echo "EXERCISE COMPLETE (stability testing: ${runs} runs)"
-                echo "Results: ${exercise_dir}/"
+                echo "Results: ${study_dir}/"
                 echo "  synthesis.md — analysis from run 1"
                 echo "  stability-report.md — per-persona consistency across ${runs} runs"
             else
-                run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
-                run_analyze "$study_dir" "$config" "$exercise_dir"
+                run_simulate "$panel_dir" "$config" "$study_dir" "$concurrency"
+                run_analyze "$panel_dir" "$config" "$study_dir"
 
                 echo ""
                 echo "EXERCISE COMPLETE"
-                echo "Results: ${exercise_dir}/"
+                echo "Results: ${study_dir}/"
                 echo "  synthesis.md — analysis + recommendation + counterargument"
                 echo "  artifacts.md — actionable deliverables"
                 echo "  simulations/ — per-persona simulation details"
             fi
             ;;
         synthesize)
-            [ -z "$study_dir" ] && { echo "Usage: ./sim.sh synthesize --study <dir>"; exit 1; }
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh synthesize --panel <dir>"; exit 1; }
 
-            if [ ! -d "${study_dir}/exercises" ]; then
-                echo "ERROR: No exercises directory at ${study_dir}/exercises/. Run exercises first."
+            if [ ! -d "${panel_dir}/studies" ]; then
+                echo "ERROR: No studies directory at ${panel_dir}/studies/. Run studies first."
                 exit 1
             fi
 
             echo ""
             echo "FACET SIMULATION ENGINE v2"
-            echo "Study: $(basename "$study_dir")"
+            echo "Study: $(basename "$panel_dir")"
             echo ""
 
-            run_cross_synthesize "$study_dir"
+            run_cross_synthesize "$panel_dir"
 
             echo ""
             echo "CROSS-SYNTHESIS COMPLETE"
-            echo "Results: ${study_dir}/cross-synthesis.md"
+            echo "Results: ${panel_dir}/cross-synthesis.md"
             ;;
         compare)
-            [ -z "$study_dir" ] && { echo "Usage: ./sim.sh compare --study <dir1> --study2 <dir2>"; exit 1; }
-            [ -z "$study_dir2" ] && { echo "Usage: ./sim.sh compare --study <dir1> --study2 <dir2>"; exit 1; }
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --panel2 <dir2>"; exit 1; }
+            [ -z "$panel_dir2" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --panel2 <dir2>"; exit 1; }
 
-            # Resolve study_dir2 to absolute path
-            if [[ "$study_dir2" != /* ]]; then
-                study_dir2="${SCRIPT_DIR}/${study_dir2}"
+            # Resolve panel_dir2 to absolute path
+            if [[ "$panel_dir2" != /* ]]; then
+                panel_dir2="${SCRIPT_DIR}/${panel_dir2}"
             fi
 
             # Collect synthesis files from both studies
             local study_a_files="" study_b_files=""
 
-            if [ -f "${study_dir}/cross-synthesis.md" ]; then
-                study_a_files="${study_dir}/cross-synthesis.md"
+            if [ -f "${panel_dir}/cross-synthesis.md" ]; then
+                study_a_files="${panel_dir}/cross-synthesis.md"
             else
-                for f in "${study_dir}/exercises"/*/synthesis.md; do
+                for f in "${panel_dir}/studies"/*/synthesis.md; do
                     [ -f "$f" ] && study_a_files="${study_a_files}
 - $f"
                 done
             fi
 
-            if [ -f "${study_dir2}/cross-synthesis.md" ]; then
-                study_b_files="${study_dir2}/cross-synthesis.md"
+            if [ -f "${panel_dir2}/cross-synthesis.md" ]; then
+                study_b_files="${panel_dir2}/cross-synthesis.md"
             else
-                for f in "${study_dir2}/exercises"/*/synthesis.md; do
+                for f in "${panel_dir2}/studies"/*/synthesis.md; do
                     [ -f "$f" ] && study_b_files="${study_b_files}
 - $f"
                 done
             fi
 
             if [ -z "$study_a_files" ] || [ -z "$study_b_files" ]; then
-                echo "ERROR: Both studies need synthesis files (run exercises or synthesize first)."
+                echo "ERROR: Both studies need synthesis files (run studies or synthesize first)."
                 exit 1
             fi
 
             echo ""
             echo "╔═══════════════════════════════════════════════╗"
             echo "║  STUDY COMPARISON                              ║"
-            echo "║  A: $(basename "$study_dir")"
-            echo "║  B: $(basename "$study_dir2")"
+            echo "║  A: $(basename "$panel_dir")"
+            echo "║  B: $(basename "$panel_dir2")"
             echo "╚═══════════════════════════════════════════════╝"
             echo ""
 
-            local compare_output="${study_dir}/comparison-vs-$(basename "$study_dir2").md"
+            local compare_output="${panel_dir}/comparison-vs-$(basename "$panel_dir2").md"
 
-            FACET_PHASE="Comparison: $(basename "$study_dir") vs $(basename "$study_dir2")" \
+            FACET_PHASE="Comparison: $(basename "$panel_dir") vs $(basename "$panel_dir2")" \
             claude --print --verbose --output-format stream-json \
                 --max-turns 30 \
                 --allowedTools "Read,Write,Glob,Grep" \
@@ -1042,10 +1215,10 @@ Write the stability report to: ${exercise_dir}/stability-report.md" \
 Read these files for context:
 1. Comparison template (follow these instructions): ${SCRIPT_DIR}/templates/comparison.md
 
-Study A ($(basename "$study_dir")):
+Study A ($(basename "$panel_dir")):
 ${study_a_files}
 
-Study B ($(basename "$study_dir2")):
+Study B ($(basename "$panel_dir2")):
 ${study_b_files}
 
 Read all listed synthesis files from both studies, then produce a comparison.
@@ -1061,8 +1234,8 @@ Write the comparison to: ${compare_output}" \
             echo "COMPARISON COMPLETE"
             echo "Results: ${compare_output}"
             ;;
-        study)
-            [ -z "$config" ] && { echo "Usage: ./sim.sh study --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"; exit 1; }
+        run)
+            [ -z "$config" ] && { echo "Usage: ./sim.sh run --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"; exit 1; }
 
             # Parse study config
             local segments per_segment study_calibration
@@ -1075,11 +1248,11 @@ Write the comparison to: ${compare_output}" \
                 exit 1
             fi
 
-            # Get exercise list
-            local exercises
-            exercises=$(python3 "${SCRIPT_DIR}/parse_config.py" "$config" "exercises" --list)
-            if [ -z "$exercises" ]; then
-                echo "ERROR: Study config must have 'exercises' array in frontmatter."
+            # Get study list from config
+            local study_configs
+            study_configs=$(python3 "${SCRIPT_DIR}/parse_config.py" "$config" "studies" --list)
+            if [ -z "$study_configs" ]; then
+                echo "ERROR: Run config must have 'studies' array in frontmatter."
                 exit 1
             fi
 
@@ -1103,58 +1276,66 @@ Write the comparison to: ${compare_output}" \
                 calibration="$study_calibration"
             fi
 
-            # Resolve exercise config paths relative to study config
+            # Resolve study config paths relative to study config
             local config_dir
             config_dir=$(dirname "$config")
 
-            local exercise_count=0
+            local study_count=0
             while IFS= read -r line; do
-                ((exercise_count++)) || true
-            done <<< "$exercises"
+                ((study_count++)) || true
+            done <<< "$study_configs"
 
             echo ""
             echo "╔═══════════════════════════════════════════════╗"
             echo "║  FACET STUDY                                   ║"
-            echo "║  Exercises: ${exercise_count}, Personas: $((segments * per_segment))                   ║"
+            echo "║  Exercises: ${study_count}, Personas: $((segments * per_segment))                   ║"
             echo "╚═══════════════════════════════════════════════╝"
-            estimate_time "$((segments * per_segment))" "$exercise_count" "$concurrency"
+            estimate_time "$((segments * per_segment))" "$study_count" "$concurrency" "$output_dir"
             echo ""
 
-            # Phase 1: Init (skip if personas already exist)
+            # Phase 1: Init (skip only when the study inputs are complete)
             local persona_count=0
-            if [ -d "${study_dir}/personas" ]; then
-                persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+            local expected_persona_count=$((segments * per_segment))
+            if [ -d "${panel_dir}/personas" ]; then
+                persona_count=$(count_files "${panel_dir}/personas" "persona-*.md")
             fi
 
-            if [ "$persona_count" -gt 0 ]; then
-                echo "Skipping init: ${persona_count} personas already exist"
+            version_lock_study_templates "$panel_dir"
+
+            if [ "$persona_count" -gt "$expected_persona_count" ]; then
+                echo "ERROR: Found ${persona_count} personas in ${panel_dir}, but study config expects ${expected_persona_count}."
+                echo "Use a fresh output directory or remove the extra persona files before resuming."
+                exit 1
+            fi
+
+            if [ "$persona_count" -eq "$expected_persona_count" ] && [ -f "${panel_dir}/plan.md" ]; then
+                echo "Skipping init: ${persona_count}/${expected_persona_count} personas already exist and plan.md is present"
                 echo ""
             else
-                # Run init by calling the functions directly
-                mkdir -p "${study_dir}/personas"
-                mkdir -p "${study_dir}/.templates"
-                cp "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/"
-                cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
-
-                run_plan "$product_config" "$study_dir" "$calibration"
-                run_generate "$product_config" "$study_dir" "$concurrency" "$calibration"
-            fi
-
-            # Phase 2: Run each exercise
-            local exercise_num=0
-            local exercise_failures=0
-            while IFS= read -r exercise_config_path; do
-                ((exercise_num++)) || true
-
-                # Resolve relative paths
-                if [[ "$exercise_config_path" != /* ]]; then
-                    exercise_config_path="${config_dir}/${exercise_config_path}"
+                mkdir -p "${panel_dir}/personas"
+                if [ "$persona_count" -gt 0 ] || [ -f "${panel_dir}/plan.md" ]; then
+                    echo "Resuming init: ${persona_count}/${expected_persona_count} personas ready"
                 fi
 
-                if [ ! -f "$exercise_config_path" ]; then
-                    echo "ERROR: Exercise config not found: $exercise_config_path"
+                run_plan "$product_config" "$panel_dir" "$calibration"
+                run_generate "$product_config" "$panel_dir" "$concurrency" "$calibration"
+            fi
+
+            # Phase 2: Run each study
+            local study_num=0
+            local study_failures=0
+            while IFS= read -r study_config_path; do
+                ((study_num++)) || true
+
+                # Resolve relative paths
+                if [[ "$study_config_path" != /* ]]; then
+                    study_config_path="${config_dir}/${study_config_path}"
+                fi
+
+                if [ ! -f "$study_config_path" ]; then
+                    echo "ERROR: Exercise config not found: $study_config_path"
                     if [ "$continue_on_error" = "true" ]; then
-                        ((exercise_failures++)) || true
+                        ((study_failures++)) || true
                         continue
                     else
                         exit 1
@@ -1162,113 +1343,108 @@ Write the comparison to: ${compare_output}" \
                 fi
 
                 local ex_name
-                ex_name=$(parse_frontmatter "$exercise_config_path" "exercise_name")
-                [ -z "$ex_name" ] && ex_name=$(basename "$exercise_config_path" .md)
+                ex_name=$(parse_frontmatter "$study_config_path" "study_name")
+                [ -z "$ex_name" ] && ex_name=$(basename "$study_config_path" .md)
 
-                local ex_dir="${study_dir}/exercises/${ex_name}"
+                local ex_dir="${panel_dir}/studies/${ex_name}"
 
                 # Skip if already completed (resumability)
                 if [ -f "${ex_dir}/synthesis.md" ]; then
-                    echo "Skipping exercise ${exercise_num}/${exercise_count}: ${ex_name} (already completed)"
+                    echo "Skipping study ${study_num}/${study_count}: ${ex_name} (already completed)"
                     continue
                 fi
 
                 echo ""
-                echo "Exercise ${exercise_num}/${exercise_count}: ${ex_name}"
+                echo "Exercise ${study_num}/${study_count}: ${ex_name}"
                 echo "---"
 
-                # Set up exercise directory and version-lock templates
+                # Set up study directory and version-lock templates
                 mkdir -p "${ex_dir}/simulations"
-                cp "$exercise_config_path" "${ex_dir}/exercise.md"
+                cp "$study_config_path" "${ex_dir}/study-config.md"
 
                 local ex_study_type
-                ex_study_type=$(parse_frontmatter "$exercise_config_path" "study_type")
-                mkdir -p "${ex_dir}/.templates"
-                cp "${SCRIPT_DIR}/templates/simulation.md" "${ex_dir}/.templates/"
-                cp "${SCRIPT_DIR}/templates/analysis.md" "${ex_dir}/.templates/"
-                if [ -n "$ex_study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${ex_study_type}.md" ]; then
-                    cp "${SCRIPT_DIR}/study-types/${ex_study_type}.md" "${ex_dir}/.templates/"
-                fi
+                ex_study_type=$(parse_frontmatter "$study_config_path" "study_type")
+                version_lock_study_phase_templates "$ex_dir" "$ex_study_type"
 
-                if ! run_simulate "$study_dir" "$exercise_config_path" "$ex_dir" "$concurrency"; then
+                if ! run_simulate "$panel_dir" "$study_config_path" "$ex_dir" "$concurrency"; then
                     echo "WARNING: Simulation failed for ${ex_name}"
                     if [ "$continue_on_error" = "true" ]; then
-                        ((exercise_failures++)) || true
+                        ((study_failures++)) || true
                         continue
                     else
                         exit 1
                     fi
                 fi
 
-                if ! run_analyze "$study_dir" "$exercise_config_path" "$ex_dir"; then
+                if ! run_analyze "$panel_dir" "$study_config_path" "$ex_dir"; then
                     echo "WARNING: Analysis failed for ${ex_name}"
                     if [ "$continue_on_error" = "true" ]; then
-                        ((exercise_failures++)) || true
+                        ((study_failures++)) || true
                         continue
                     else
                         exit 1
                     fi
                 fi
-            done <<< "$exercises"
+            done <<< "$study_configs"
 
             # Phase 3: Cross-synthesis
             echo ""
-            run_cross_synthesize "$study_dir"
+            run_cross_synthesize "$panel_dir"
 
             echo ""
             echo "╔═══════════════════════════════════════════════╗"
             echo "║  STUDY COMPLETE                                ║"
             echo "╚═══════════════════════════════════════════════╝"
             echo ""
-            echo "Results: ${study_dir}/"
-            echo "  cross-synthesis.md — unified findings across all exercises"
-            if [ "$exercise_failures" -gt 0 ]; then
-                echo "  WARNING: ${exercise_failures} exercise(s) failed"
+            echo "Results: ${panel_dir}/"
+            echo "  cross-synthesis.md — unified findings across all studies"
+            if [ "$study_failures" -gt 0 ]; then
+                echo "  WARNING: ${study_failures} study(s) failed"
             fi
             echo ""
-            echo "Per-exercise results in exercises/*/"
+            echo "Per-study results in studies/*/"
             ;;
         status)
-            [ -z "$study_dir" ] && { echo "Usage: ./sim.sh status --study <dir>"; exit 1; }
-            show_status "$study_dir"
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh status --panel <dir>"; exit 1; }
+            show_status "$panel_dir"
             ;;
         help|--help|-h)
             echo "Facet v2 — Pre-Launch Simulation Engine"
             echo ""
             echo "Usage:"
             echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
-            echo "  ./sim.sh exercise    --study <dir> --config <exercise-config> [--concurrency N] [--runs N]"
-            echo "  ./sim.sh synthesize  --study <dir>"
-            echo "  ./sim.sh compare     --study <dir1> --study2 <dir2>"
-            echo "  ./sim.sh study       --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
-            echo "  ./sim.sh status      --study <dir>"
+            echo "  ./sim.sh study       --panel <dir> --config <study-config> [--concurrency N] [--runs N]"
+            echo "  ./sim.sh synthesize  --panel <dir>"
+            echo "  ./sim.sh compare     --panel <dir1> --panel2 <dir2>"
+            echo "  ./sim.sh run         --config <full-study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
+            echo "  ./sim.sh status      --panel <dir>"
             echo ""
             echo "Commands:"
-            echo "  init        Plan + generate persona backgrounds (parallel)"
-            echo "  exercise    Simulate personas through options (parallel) + analyze"
-            echo "  synthesize  Cross-exercise synthesis (unified findings across all exercises)"
-            echo "  compare     Compare findings between two study runs"
-            echo "  study       Full study lifecycle: init + all exercises + synthesize"
-            echo "  status      Show study progress and exercise results"
+            echo "  init        Create a research panel: plan + generate persona backgrounds"
+            echo "  study       Run a study against a panel: simulate + analyze"
+            echo "  synthesize  Cross-study synthesis (unified findings across all studies)"
+            echo "  compare     Compare findings between two panels"
+            echo "  run         Full lifecycle: init panel + all studies + synthesize"
+            echo "  status      Show panel and study progress"
             echo ""
             echo "Options:"
-            echo "  --config      Path to config file (product config for init, exercise config for exercise)"
-            echo "  --name        Study name (default: config filename without .md)"
-            echo "  --study       Path to study output directory"
+            echo "  --config      Path to config file (product config for init, study config for study)"
+            echo "  --name        Panel name (default: config filename without .md)"
+            echo "  --panel       Path to panel output directory"
             echo "  --concurrency Number of parallel generations/simulations (default: 5)"
-            echo "  --calibration       Path to calibration data file OR directory (real research data to ground personas)"
-            echo "  --continue-on-error Skip failed exercises instead of halting (study command only)"
-            echo "  --runs           Number of simulation runs for stability testing (exercise command, default: 1)"
+            echo "  --calibration Path to calibration data file OR directory"
+            echo "  --continue-on-error Skip failed studies instead of halting (run command only)"
+            echo "  --runs        Number of simulation runs for stability testing (default: 1)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/superhuman-product.md)"
             echo "  2. ./sim.sh init --config examples/superhuman-product.md --name superhuman"
-            echo "  3. Create exercise configs (see examples/superhuman-pricing.md)"
-            echo "  4. ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md"
-            echo "  5. Run more exercises against the same personas:"
-            echo "     ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-copy.md"
-            echo "  6. Produce cross-exercise synthesis:"
-            echo "     ./sim.sh synthesize --study output/superhuman/"
+            echo "  3. Create study configs (see examples/superhuman-pricing.md)"
+            echo "  4. ./sim.sh study --panel output/superhuman/ --config examples/superhuman-pricing.md"
+            echo "  5. Run more studies against the same panel:"
+            echo "     ./sim.sh study --panel output/superhuman/ --config examples/superhuman-copy.md"
+            echo "  6. Produce cross-study synthesis:"
+            echo "     ./sim.sh synthesize --panel output/superhuman/"
             ;;
         *)
             echo "Unknown command: $cmd"

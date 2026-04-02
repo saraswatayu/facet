@@ -3,8 +3,8 @@
 You are comparing findings between two runs of a Facet behavioral simulation study. Both studies tested the same (or similar) product with different personas, different calibration data, or different configurations. Your job is to identify which findings are stable (appear in both runs) and which are fragile (appear in only one).
 
 You have been given:
-- Cross-synthesis or per-exercise synthesis files from Study A
-- Cross-synthesis or per-exercise synthesis files from Study B
+- Cross-synthesis or per-study synthesis files from Study A
+- Cross-synthesis or per-study synthesis files from Study B
 
 Read ALL provided synthesis files before writing.
 
@@ -16,7 +16,7 @@ Write a single document with these sections:
 
 ### 1. Comparison Summary
 
-Two paragraphs. What are the studies being compared? How do they differ (personas, calibration, exercise config)? What's the headline finding from the comparison?
+Two paragraphs. What are the studies being compared? How do they differ (personas, calibration, study config)? What's the headline finding from the comparison?
 
 ### 2. Stable Findings
 

@@ -1,10 +1,10 @@
 ---
 segments: 6
 personas_per_segment: 5
-exercises:
-  - config: exercises/concept-reactions.md
-  - config: exercises/feature-importance.md
-  - config: exercises/pricing-sensitivity.md
+studies:
+  - config: studies/concept-reactions.md
+  - config: studies/feature-importance.md
+  - config: studies/pricing-sensitivity.md
 ---
 
 # Product: [Your Product Name]
@@ -26,10 +26,10 @@ Answer: "Should we launch this?" Test concept reactions, feature importance, and
 
 ## Exercise Configs (create these files)
 
-### exercises/concept-reactions.md
+### studies/concept-reactions.md
 ```yaml
 ---
-exercise_name: concept-reactions
+study_name: concept-reactions
 study_type: custom
 options:
   - name: "Core Product"
@@ -40,10 +40,10 @@ options:
 [Describe what you want to learn about how people react to your concept]
 ```
 
-### exercises/feature-importance.md
+### studies/feature-importance.md
 ```yaml
 ---
-exercise_name: feature-importance
+study_name: feature-importance
 study_type: features
 options:
   - name: "[Feature 1]"
@@ -56,10 +56,10 @@ options:
 [Context about these features and what you want to learn]
 ```
 
-### exercises/pricing-sensitivity.md
+### studies/pricing-sensitivity.md
 ```yaml
 ---
-exercise_name: pricing-sensitivity
+study_name: pricing-sensitivity
 study_type: pricing
 options:
   - name: "[Pricing Model A]"

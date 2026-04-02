@@ -1,8 +1,8 @@
 # Per-Persona Simulation Instructions
 
-You are running a behavioral simulation for a single persona through a product exercise. The persona's background (identity, psychology, domain profile, discovery) has already been generated separately. Your job is to simulate this persona's experience with each option being tested.
+You are running a behavioral simulation for a single persona through a product study. The persona's background (identity, psychology, domain profile, discovery) has already been generated separately. Your job is to simulate this persona's experience with each option being tested.
 
-The exercise config, persona background file, and study-type rules have been provided as separate files — you should have already read them before reading this template.
+The study config, persona background file, and study-type rules have been provided as separate files — you should have already read them before reading this template.
 
 ---
 
@@ -27,7 +27,7 @@ This simulation must read as a continuation of the persona's story. The persona'
 
 ## Your Task
 
-Read the persona background file and the exercise config. Then simulate this persona's experience with each option and write the results to the output path specified in your instructions.
+Read the persona background file and the study config. Then simulate this persona's experience with each option and write the results to the output path specified in your instructions.
 
 The simulation file should begin with a header identifying the persona (name, ID, segment) and then proceed through the following sections.
 
@@ -37,7 +37,7 @@ The simulation file should begin with a header identifying the persona (name, ID
 
 ### OPTION SIMULATIONS
 
-**Create one section per option defined in the exercise config.** For each option:
+**Create one section per option defined in the study config.** For each option:
 
 #### Signup/Purchase Decision
 
@@ -116,9 +116,9 @@ Structured decision summary using Beliefs-Desires-Intentions:
 
 ---
 
-### COPY VARIANT REACTIONS (only if copy variants are defined in the exercise config)
+### COPY VARIANT REACTIONS (only if copy variants are defined in the study config)
 
-For each copy variant defined in the exercise config:
+For each copy variant defined in the study config:
 
 - **Internal monologue** when reading it (in character, using their vocabulary and thought patterns — this should feel different from persona to persona)
 - **Scores** on 4 dimensions (0-10 each):
@@ -143,3 +143,64 @@ After all variants: **Final ranking** (best to worst for THIS persona) with one-
 - Deal-breakers from the persona background MUST be honored. If the background says "walks away from any subscription over $15/month," the simulation must reflect that.
 - Behavioral economics parameters from the background must be active. A persona with "strong status quo bias" should not casually switch. A "System 1" persona should not write a pros/cons list.
 - If the persona's information access (from the background) is limited, their decision should reflect ONLY what they know, not the full product description.
+
+---
+
+## STRUCTURED SUMMARY (write to a separate file)
+
+After writing the full simulation above, ALSO write a structured summary to the summary output path specified in your instructions. This summary is a compact extraction used by the analysis phase. It must be accurate to the simulation you just wrote.
+
+The summary uses a rigid schema. Every field must be filled. Skip sections marked "skip if..." when the study has no relevant data.
+
+```
+# Simulation Summary: Persona [NNN] — [Name]
+Segment: [segment name]
+Identity: [age, role, location, income bracket]
+
+## Verdict
+Option chosen: [option name]
+Confidence: HIGH/MODERATE/LOW
+Key reason: [1 sentence — the decisive factor from the simulation]
+
+## Decision Drivers (top 3)
+1. [Factor with specifics. "$38,500 salary" not "moderate income"]
+2. [Factor]
+3. [Factor]
+
+## Behavioral Economics
+Primary mechanism: [loss aversion / zero-price effect / status quo bias / etc.]
+Secondary: [mechanism]
+Stated vs. revealed gap: [none / describe if persona says one thing but profile predicts another]
+
+## Key Quotes (2-3, verbatim from the simulation above)
+- "[Most revealing quote about their decision]"
+- "[Quote showing internal conflict or surprise]"
+
+## Objections
+- [Primary concern, in persona's voice]
+- [Secondary concern, if any]
+
+## Quantitative Data
+| Metric | Value |
+|--------|-------|
+| NPS (chosen option) | [N] |
+| NPS (rejected option) | [N] |
+| 12-month retention | [yes/no/conditional] |
+| Willingness-to-pay ceiling | [$N] |
+| Referral likelihood | [1-10] |
+| Net value (chosen option) | [$N] |
+
+## Copy Variant Rankings (skip if study has no copy variants)
+[Rank variants best to worst with one-line reason per variant]
+
+## Referral Behavior
+Who they'd tell: [specific people/channels from simulation]
+What they'd say: [the referral story, 1 sentence]
+Travelability: [1-5 score]
+
+## Notable/Unexpected
+[Internal contradictions, unusual reasoning, outlier behavior for their segment.
+ If nothing notable, write "None."]
+```
+
+Write ONLY this structured content to the summary file. No preamble, no explanation.

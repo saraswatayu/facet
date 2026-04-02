@@ -25,18 +25,18 @@ class TestParseFrontmatter(unittest.TestCase):
         self.assertIn('# Product', body)
 
     def test_string_values(self):
-        path = self._write_temp('---\nexercise_name: pricing-tiers\nstudy_type: pricing\n---\n')
+        path = self._write_temp('---\nstudy_name: pricing-tiers\nstudy_type: pricing\n---\n')
         fm, _ = parse_frontmatter(path)
-        self.assertEqual(fm['exercise_name'], 'pricing-tiers')
+        self.assertEqual(fm['study_name'], 'pricing-tiers')
         self.assertEqual(fm['study_type'], 'pricing')
 
-    def test_exercises_array(self):
-        content = '---\nsegments: 6\nexercises:\n  - config: ex1.md\n  - config: ex2.md\n---\n# Body\n'
+    def test_studies_array(self):
+        content = '---\nsegments: 6\nstudies:\n  - config: ex1.md\n  - config: ex2.md\n---\n# Body\n'
         path = self._write_temp(content)
         fm, body = parse_frontmatter(path)
-        self.assertEqual(len(fm['exercises']), 2)
-        self.assertEqual(fm['exercises'][0]['config'], 'ex1.md')
-        self.assertEqual(fm['exercises'][1]['config'], 'ex2.md')
+        self.assertEqual(len(fm['studies']), 2)
+        self.assertEqual(fm['studies'][0]['config'], 'ex1.md')
+        self.assertEqual(fm['studies'][1]['config'], 'ex2.md')
         self.assertEqual(body, '# Body')
 
     def test_no_frontmatter(self):
@@ -71,7 +71,7 @@ class TestParseFrontmatter(unittest.TestCase):
 
     def test_options_array(self):
         content = """---
-exercise_name: test
+study_name: test
 options:
   - name: "Option A"
     description: "First option"

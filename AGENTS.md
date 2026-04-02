@@ -8,17 +8,17 @@ Six-command pipeline:
 
 ```
 sim.sh init:       Plan (Opus) → Generate (Sonnet, parallel waves)
-sim.sh study:      Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
+sim.sh study:   Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
 sim.sh synthesize: Cross-Synthesis (Opus) — unified findings across studies
-sim.sh run:        Full lifecycle — init panel + all studies + synthesize (single command)
-sim.sh compare:    Diff findings between two panels
-sim.sh status:     Panel progress, study completion, cross-synthesis readiness
+sim.sh study:      Full lifecycle — init + all studies + synthesize (single command)
+sim.sh compare:    Diff findings between two study runs
+sim.sh status:     Study progress, study completion, cross-synthesis readiness
 ```
 
 Primary interface:
-- **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `claude --print` subprocess.
+- **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `Codex --print` subprocess.
 
-Key design: personas are generated ONCE as a project-level "panel" and reused across multiple studies. The `run` subcommand reads a single study config containing all studies and runs the full pipeline. The `study` subcommand runs a single study against an existing panel.
+Key design: personas are generated ONCE and reused across multiple studies. The `study` subcommand reads a single study config containing all studies and runs the full pipeline.
 
 ### Model Routing
 
@@ -32,7 +32,7 @@ Key design: personas are generated ONCE as a project-level "panel" and reused ac
 
 ### Tool Restrictions
 
-All `claude` invocations are restricted to `Read,Write,Glob,Grep`. No Bash — no escape hatch. The one exception: calibration directory mode adds Glob and Grep to persona generation (normally Read,Write only).
+All `Codex` invocations are restricted to `Read,Write,Glob,Grep`. No Bash — no escape hatch. The one exception: calibration directory mode adds Glob and Grep to persona generation (normally Read,Write only).
 
 ## Wave-Based Generation
 
@@ -55,7 +55,7 @@ All four templates (`plan.md`, `persona.md`, `simulation.md`, `analysis.md`) fol
 
 1. **Integrity rules** — anti-sycophancy guardrails. Every template explicitly permits rejection, skepticism, indifference. "This persona is NOT obligated to like the product."
 2. **Quality bar** — specific > generic. "$38,500/year" not "moderate salary." Named neighborhoods, not "urban area."
-3. **Thinking steps** — brainstorm/analysis sections marked "do NOT include in output." These prompt Claude to reason before writing but keep the output clean.
+3. **Thinking steps** — brainstorm/analysis sections marked "do NOT include in output." These prompt Codex to reason before writing but keep the output clean.
 4. **Consistency self-check** — templates end with verification that stated facts, numbers, and decisions are internally consistent.
 
 ### Study-Type Rules
@@ -87,7 +87,7 @@ The `--calibration` flag grounds personas in real-world data instead of LLM prio
 
 **Single file mode:** File content is injected directly into the planning prompt.
 
-**Directory mode:** Claude uses Glob to discover files. If `manifest.md` exists at the directory root, it's read first — it describes each file's purpose. Claude selectively reads the most relevant files. The plan output includes a "Calibration Sources" section listing what was read and extracted. Directory mode enables Glob/Grep tools for persona generation (normally Read/Write only).
+**Directory mode:** Codex uses Glob to discover files. If `manifest.md` exists at the directory root, it's read first — it describes each file's purpose. Codex selectively reads the most relevant files. The plan output includes a "Calibration Sources" section listing what was read and extracted. Directory mode enables Glob/Grep tools for persona generation (normally Read/Write only).
 
 Supported file types: `.md`, `.csv`, `.txt`, `.json`, `.yaml`, `.yml`.
 
@@ -99,8 +99,8 @@ stream_filter.py        — real-time progress display, parses stream-json, uses
 templates/
   plan.md               — planning: segments, constraint vectors, diversity matrix, name registry
   persona.md            — persona background generation (identity, psychology, domain, discovery)
-  simulation.md         — per-persona study simulation (Chain-of-Feeling, BDI verdicts) + structured summary sidecar
-  analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files). Reads summaries when >12 personas.
+  simulation.md         — per-persona study simulation (Chain-of-Feeling, BDI verdicts)
+  analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files)
   cross-synthesis.md    — cross-study synthesis → unified findings across all studies
   comparison.md         — study comparison → stable vs fragile findings
   stability.md          — simulation stability report → per-persona consistency
@@ -131,9 +131,9 @@ study-templates/        — 5 pre-built study configs (concept, pricing, activat
 
 **Study config** (for `study`): Markdown with YAML frontmatter containing `study_name`, `study_type`, `options`, and optionally `copy_variants`. Body has options detail and copy variants.
 
-**Full run config** (for `run`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `studies` array. Each study entry has a `config` path (relative to the config file). Body is the product description (doubles as product config for init).
+**Study config** (for `study`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `studies` array. Each study entry has a `config` path (relative to the study config file). Body is the product description (doubles as product config for init).
 
-See `examples/` for study/product configs, `study-templates/` for full run configs.
+See `examples/` for study/product configs, `study-templates/` for study configs.
 
 ## Output Structure
 
@@ -149,14 +149,12 @@ output/{product}/
 └── studies/
     └── {study-name}/
         ├── .templates/             # version-locked study templates
-        ├── study-config.md         # copy of study config
+        ├── study-config.md             # copy of study config
         ├── simulations/
-        │   ├── persona-001.md          # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
-        │   ├── persona-001-summary.md  # structured sidecar (verdict, quotes, numbers)
+        │   ├── persona-001.md      # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
         │   └── ...
         ├── synthesis.md            # analysis + recommendation + counterargument
-        ├── artifacts.md            # actionable deliverables + validation plan
-        └── verification.md         # spot-check results (separate, never appended to synthesis)
+        └── artifacts.md            # actionable deliverables + validation plan
 ```
 
 ## Conventions
@@ -168,18 +166,17 @@ These are invariants — do not break them:
 - Persona files are zero-padded: `persona-001.md`, `persona-023.md`
 - Analysis produces TWO files: `synthesis.md` and `artifacts.md` (not one combined file)
 - Names must be unique across the entire study (enforced by name registry in plan.md)
-- Simulation summaries (persona-NNN-summary.md) are written alongside full simulations during the simulate phase. Analysis reads summaries when >12 personas to reduce context from ~490K to ~240-288K tokens. verification.md is always a separate file.
 - All numbers in personas/simulations must be specific and internally consistent
 - Template sections adapt to product domain (not hardcoded to travel/flights)
 - Templates are version-locked into `.templates/` at init and study time
-- No Bash tool in `claude` invocations — Read, Write, Glob, Grep only
+- No Bash tool in `Codex` invocations — Read, Write, Glob, Grep only
 
 ## Adding a New Study Type
 
 1. Create `study-types/{name}.md` following the pattern in existing study types
 2. Include: caveat section, what it tests, simulation framework, per-persona metrics, outcome requirements
 3. Create an example study config in `examples/` with matching `study_type` in frontmatter
-4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh study --panel output/test/ --config examples/your-study.md`
+4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh study --panel output/test/ --config examples/your-study-config.md`
 5. Review the synthesis — does it produce actionable recommendations?
 
 No code changes needed in sim.sh — it reads `study_type` from frontmatter and loads `study-types/{type}.md` automatically.

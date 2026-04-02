@@ -1,5 +1,5 @@
 ---
-exercise_name: onboarding-flows
+study_name: onboarding-flows
 study_type: onboarding
 options:
   - name: "Flow A"

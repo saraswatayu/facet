@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Your Facet study is ready\" with title \"Facet\" sound name \"Glass\"' 2>/dev/null || notify-send 'Facet' 'Your Facet study is ready' 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
