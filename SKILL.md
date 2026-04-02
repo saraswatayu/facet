@@ -34,29 +34,23 @@ If `$ARGUMENTS` is empty (no research question provided), read and present
 
 ## With a Question: Full Research Flow
 
-### Step 1: Codebase Scan (parallel)
+### Step 1: Codebase Scan
 
-Launch 3 Explore subagents in parallel to scan PROJECT_ROOT. Explore agents use
-Haiku (fast, cheap, read-only). Each searches for one category:
+Use Glob and Grep directly (no subagents needed, these are built-in tools):
 
-**Agent A — Pricing:** Glob for files with pricing, plan, tier, billing, subscription
-in the name or path. Grep for dollar amounts, price constants, plan definitions.
-Read the most relevant files (first 100-200 lines).
+1. `Glob` for files matching: `**/*{pricing,plan,tier,billing,subscription}*`
+2. `Glob` for: `**/*{feature,flag,capability}*`
+3. `Glob` for: `**/*{onboarding,signup,welcome,tutorial}*`
+4. `Grep` for dollar amounts: `\$\d+` across common source file types
+5. Read the most relevant matches (first 100-200 lines of each)
 
-**Agent B — Features:** Glob for feature flags, capability configs. Grep for feature
-lists, toggles, enabled/disabled patterns. Read matching files.
+This takes a few seconds with direct tool calls. No agent overhead needed.
 
-**Agent C — Onboarding:** Glob for onboarding, signup, welcome, tutorial files or
-components. Read to understand the flow structure.
-
-Each agent returns: file paths found, concrete values extracted (dollar amounts,
-plan names, feature names, flow steps), and a 1-2 sentence summary.
-
-Merge results from all 3. If any found useful data, present conversationally:
+If you find useful data, present it conversationally:
 - "I found pricing at $15/$30/$79 in src/config/plans.ts"
 - "Your feature flags define 12 features, 8 currently enabled"
 
-If none found anything relevant, skip to Step 2 silently.
+If nothing relevant, skip to Step 2 silently. Don't mention the scan.
 
 The scan finds FACTS. It does NOT generate option descriptions. Ask the user to
 describe each option fairly in their own words. This prevents config bias.
@@ -182,10 +176,12 @@ Then continue with the Persona Gallery, Finding Spotlight, and Follow-Up Loop be
 
 ### Steps 5-6: Persona Gallery + Finding Spotlight + Quality Checks (parallel)
 
-After the study completes, launch 3 agents in parallel to analyze different output
-files simultaneously. This turns 30+ seconds of sequential reading into one pass:
+After the study completes, read the output files directly. For large studies (30+
+personas), use an Explore subagent to read all persona files and select standouts
+(keeps the verbose content out of the main context). For smaller studies, just
+read the files directly.
 
-**Agent A — Persona Gallery:** Read all persona files. Select the 5 most interesting:
+**Persona Gallery:** Read persona files. Select the 5 most interesting:
 - Strongest advocate (most enthusiastic about the product)
 - Strongest critic (most resistant)
 - Most internally contradictory (said yes but with reservations suggesting churn)
@@ -208,8 +204,8 @@ Present each persona with BEHAVIOR, not just demographics:
 
 Full panel: .facet/output/{study}/personas/"
 
-**Agent B — Finding Spotlight:** Read cross-synthesis.md (or synthesis.md if single
-exercise). Extract the top findings and structure as:
+**Finding Spotlight:** Read cross-synthesis.md (or synthesis.md if single exercise).
+Extract the top findings and structure as:
 
 **Line 1: Crystallizer sentence.** Compress the answer into one punchy line.
 "$15 wins signup. $30 wins retention. Neither wins both."
