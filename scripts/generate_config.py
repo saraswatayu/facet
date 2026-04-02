@@ -12,14 +12,39 @@ Prints the study config path to stdout on success. Exit 1 on validation failure.
 
 import json
 import os
+import re
 import sys
 import tempfile
+from datetime import datetime
 
 import yaml
 
 # Add parent directory to path so we can import parse_config
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from parse_config import parse_frontmatter
+
+
+# --- Study naming ---
+
+def make_unique_slug(slug, output_dir=None):
+    """Auto-increment a slug to avoid directory collisions.
+
+    "homepage-layout" → "homepage-layout" (first time)
+    "homepage-layout" → "homepage-layout-2" (second time)
+    """
+    if not output_dir:
+        return slug
+    base_slug = slug
+    counter = 2
+    while os.path.exists(os.path.join(output_dir, slug)):
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    return slug
+
+
+def fallback_slug(product_name):
+    """Simple fallback slug from product name when no study_name is provided."""
+    return re.sub(r'[^\w]', '-', product_name.lower()).strip('-')[:30]
 
 
 # --- Study type matching ---
@@ -133,8 +158,13 @@ def generate_study_config(data, exercise_paths, output_dir):
     calibration_context = data.get('calibration_context', '')
     codebase_data = data.get('codebase_data', {})
 
+    # Study name: prefer LLM-generated name from input, fall back to product name
+    raw_name = data.get('study_name') or fallback_slug(product_name)
+    study_name = make_unique_slug(raw_name, output_dir=output_dir)
+
     # Build YAML frontmatter (use yaml.dump for safe serialization)
     frontmatter = {
+        'study_name': study_name,
         'segments': segments,
         'personas_per_segment': personas_per_segment,
     }
@@ -168,7 +198,6 @@ def generate_study_config(data, exercise_paths, output_dir):
         lines.append('')
 
     content = '\n'.join(lines)
-    study_name = product_name.lower().replace(' ', '-')
     filepath = os.path.join(output_dir, f'{study_name}-study.md')
     with open(filepath, 'w') as f:
         f.write(content)
