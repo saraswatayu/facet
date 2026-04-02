@@ -4,3 +4,5 @@ studies/
 *.log
 .DS_Store
 TODOS.md
+__pycache__/
+*.pyc
