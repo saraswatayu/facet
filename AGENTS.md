@@ -76,8 +76,8 @@ Each study type also has outcome requirements (e.g., "at least 1 persona should 
 ## Template Version Locking
 
 Templates are copied into `.templates/` directories at init and study time:
-- `output/{name}/.templates/` gets `plan.md` + `persona.md` at init
-- `output/{name}/studies/{study}/.templates/` gets `simulation.md` + `analysis.md` + `{study-type}.md` at study time
+- `{panel}/.templates/` gets `plan.md` + `persona.md` + `cross-synthesis.md` + `comparison.md` at init
+- `{panel}/studies/{study}/.templates/` gets `simulation.md` + `analysis.md` + `stability.md` + `{study-type}.md` at study time
 
 This means existing studies are reproducible even if source templates change. Contributors modifying templates don't break past studies.
 
@@ -137,24 +137,28 @@ See `examples/` for study/product configs, `study-templates/` for study configs.
 
 ## Output Structure
 
+The panel directory contains personas (shared across studies) and per-study results. When used via the `/facet` skill, the panel root is `.facet/` in the user's project. When used via CLI, it defaults to `output/{name}/`.
+
 ```
-output/{product}/
-├── .templates/                     # version-locked init + cross-synthesis templates
-├── plan.md                         # segment matrix, constraint vectors, diversity matrix
+{panel}/                                # .facet/ (skill) or output/{name}/ (CLI)
+├── .templates/                         # version-locked init + cross-synthesis templates
+├── plan.md                             # segment matrix, constraint vectors, diversity matrix
 ├── personas/
-│   ├── persona-001.md              # background ONLY (identity, psychology, domain, discovery)
+│   ├── persona-001.md                  # background ONLY (identity, psychology, domain, discovery)
 │   └── ...
-├── .status                         # JSON-line phase completion tracking
-├── cross-synthesis.md              # unified findings across all studies
+├── .status                             # JSON-line phase completion tracking
+├── cross-synthesis.md                  # unified findings across all studies
 └── studies/
     └── {study-name}/
-        ├── .templates/             # version-locked study templates
+        ├── .templates/                 # version-locked study templates
         ├── study-config.md             # copy of study config
         ├── simulations/
-        │   ├── persona-001.md      # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
+        │   ├── persona-001.md          # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
+        │   ├── persona-001-summary.md  # structured sidecar (verdict, quotes, numbers)
         │   └── ...
-        ├── synthesis.md            # analysis + recommendation + counterargument
-        └── artifacts.md            # actionable deliverables + validation plan
+        ├── synthesis.md                # analysis + recommendation + counterargument
+        ├── artifacts.md                # actionable deliverables + validation plan
+        └── verification.md             # spot-check results (separate, never appended to synthesis)
 ```
 
 ## Conventions
