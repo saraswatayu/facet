@@ -99,8 +99,8 @@ stream_filter.py        — real-time progress display, parses stream-json, uses
 templates/
   plan.md               — planning: segments, constraint vectors, diversity matrix, name registry
   persona.md            — persona background generation (identity, psychology, domain, discovery)
-  simulation.md         — per-persona exercise simulation (Chain-of-Feeling, BDI verdicts)
-  analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files)
+  simulation.md         — per-persona exercise simulation (Chain-of-Feeling, BDI verdicts) + structured summary sidecar
+  analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files). Reads summaries when >12 personas.
   cross-synthesis.md    — cross-exercise synthesis → unified findings across all exercises
   comparison.md         — study comparison → stable vs fragile findings
   stability.md          — simulation stability report → per-persona consistency
@@ -151,10 +151,12 @@ output/{product}/
         ├── .templates/             # version-locked exercise templates
         ├── exercise.md             # copy of exercise config
         ├── simulations/
-        │   ├── persona-001.md      # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
+        │   ├── persona-001.md          # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
+        │   ├── persona-001-summary.md  # structured sidecar (verdict, quotes, numbers)
         │   └── ...
         ├── synthesis.md            # analysis + recommendation + counterargument
-        └── artifacts.md            # actionable deliverables + validation plan
+        ├── artifacts.md            # actionable deliverables + validation plan
+        └── verification.md         # spot-check results (separate, never appended to synthesis)
 ```
 
 ## Conventions
@@ -166,6 +168,7 @@ These are invariants — do not break them:
 - Persona files are zero-padded: `persona-001.md`, `persona-023.md`
 - Analysis produces TWO files: `synthesis.md` and `artifacts.md` (not one combined file)
 - Names must be unique across the entire study (enforced by name registry in plan.md)
+- Simulation summaries (persona-NNN-summary.md) are written alongside full simulations during the simulate phase. Analysis reads summaries when >12 personas to reduce context from ~490K to ~240-288K tokens. verification.md is always a separate file.
 - All numbers in personas/simulations must be specific and internally consistent
 - Template sections adapt to product domain (not hardcoded to travel/flights)
 - Templates are version-locked into `.templates/` at init and exercise time
