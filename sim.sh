@@ -86,6 +86,8 @@ reflect patterns found in this data, not just LLM training priors."
     fi
 
     echo ""
+    update_status "$study_dir" "plan" "started"
+
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  PHASE 1: PLANNING                            ║"
     echo "║  Segments: ${segments}, Per segment: ${per_segment}              ║"
@@ -165,6 +167,8 @@ run_generate() {
 
     mkdir -p "${study_dir}/personas"
     mkdir -p "${study_dir}/logs"
+
+    update_status "$study_dir" "generate" "started" "0" "$total"
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -341,6 +345,8 @@ run_simulate() {
         exit 1
     fi
 
+    update_status "$exercise_dir" "simulate" "started" "0" "$total"
+
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  SIMULATING: ${exercise_name}"
@@ -423,6 +429,8 @@ run_analyze() {
     local exercise_config="$2"
     local exercise_dir="$3"
 
+    update_status "$exercise_dir" "analyze" "started"
+
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  ANALYZING RESULTS                             ║"
@@ -499,6 +507,8 @@ Use full persona backgrounds for arc tracking."
     fi
 
     echo ""
+    update_status "$study_dir" "cross-synthesize" "started"
+
     echo "╔═══════════════════════════════════════════════╗"
     echo "║  CROSS-EXERCISE SYNTHESIS                      ║"
     echo "║  Exercises: ${exercise_count}, Personas: ${persona_count}                    ║"
