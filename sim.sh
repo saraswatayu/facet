@@ -583,7 +583,7 @@ run_analyze() {
     summary_count=$(count_files "${study_dir}/simulations" "persona-*-summary.md")
 
     local simulation_instruction
-    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ]; then
+    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -eq "$persona_count" ] && [ "$summary_count" -gt 0 ]; then
         simulation_instruction="Then read ALL simulation SUMMARY files in: ${study_dir}/simulations/ (files matching persona-*-summary.md)
 These are structured extractions containing verdicts, key quotes, quantitative data, and behavioral economics analysis.
 If you need full simulation detail for a specific persona (e.g., for the Key Personas section or counterargument), read their full simulation file (persona-NNN.md without the -summary suffix)."
@@ -592,6 +592,8 @@ If you need full simulation detail for a specific persona (e.g., for the Key Per
         simulation_instruction="Then read ALL simulation files in: ${study_dir}/simulations/"
         if [ "$persona_count" -le 12 ]; then
             echo "  Reading full simulations (${persona_count} personas, under threshold)"
+        elif [ "$summary_count" -gt 0 ]; then
+            echo "  Reading full simulations (${summary_count}/${persona_count} summaries available; falling back to complete source files)"
         else
             echo "  Reading full simulations (no summaries available)"
         fi
@@ -633,7 +635,7 @@ Write the artifacts to: ${study_dir}/artifacts.md" \
     update_status "$study_dir" "analyze" "complete"
 
     # Run spot-check verification if synthesis was generated and summaries were used
-    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ] && [ -s "${study_dir}/synthesis.md" ]; then
+    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -eq "$persona_count" ] && [ "$summary_count" -gt 0 ] && [ -s "${study_dir}/synthesis.md" ]; then
         run_spot_check "$panel_dir" "$study_dir" "$persona_count"
     fi
 }
