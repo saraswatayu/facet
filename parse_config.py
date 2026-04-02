@@ -61,9 +61,13 @@ def main():
         if isinstance(value, list):
             for item in value:
                 if isinstance(item, dict):
-                    # Handle list of dicts (e.g., studies with 'config' key)
-                    for v in item.values():
-                        print(v)
+                    # Handle list of dicts — extract 'config' key if present, else first value
+                    if 'config' in item:
+                        print(item['config'])
+                    else:
+                        first_val = next(iter(item.values()), None)
+                        if first_val is not None:
+                            print(first_val)
                 else:
                     print(item)
         elif value:
