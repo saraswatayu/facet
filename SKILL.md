@@ -2,7 +2,7 @@
 name: facet
 description: Run product research studies with AI-generated personas. Simulates pricing, features, onboarding, copy, and retention decisions with 48+ psychologically detailed personas. Ask a product question, get a research synthesis.
 argument-hint: "[research question]"
-allowed-tools: Bash, Read, Write, Glob, Grep, TaskCreate, TaskUpdate, TaskList
+allowed-tools: Bash, Read, Write, Glob, Grep, Agent, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: true
 effort: high
 ---
@@ -113,17 +113,20 @@ RECOMMENDATION: [what the user should do next]
 
 ## Step 1: Scan the Codebase
 
-Run these Glob calls to find product data in the user's project:
+Use an Explore agent to find product data in the user's project:
 
-1. `Glob("**/*{pricing,plan,tier,billing,subscription}*")`
-2. `Glob("**/*{feature,flag,capability}*")`
-3. `Glob("**/*{onboarding,signup,welcome,tutorial}*")`
+```
+Agent(subagent_type="Explore", prompt="Search this codebase for product data
+relevant to a research study. Look for: pricing/billing/subscription configs,
+feature flags or feature lists, onboarding/signup/welcome flows, landing page
+copy, and any analytics or conversion data. Report: file paths, concrete facts
+(dollar amounts, plan names, feature names, flow steps), and anything that
+describes the product's value proposition. Be thorough but concise.")
+```
 
-Read the top 3-5 most relevant matches. Extract facts: dollar amounts, plan names,
-feature names.
-
-If you found data, tell the user what you found in 2-3 lines. Then ask them to
-describe each option in their own words (the scan finds facts, NOT descriptions).
+If the Explore agent found data, tell the user what you found in 2-3 lines.
+Then ask them to describe each option in their own words (the scan finds facts,
+NOT descriptions).
 
 If nothing found, move to Step 2 silently.
 
