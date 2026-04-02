@@ -52,6 +52,89 @@ update_status() {
     fi
 }
 
+# --- Time estimation ---
+estimate_time() {
+    local personas="$1" exercises="${2:-1}" concurrency="${3:-5}"
+
+    # Try to get historical averages from past .status files
+    local avg_gen_per_persona=90  # seconds, baseline
+    local avg_sim_per_persona=60
+    local avg_analysis=120
+    local avg_cross_synth=180
+
+    # Search for historical data in output/
+    local history_file
+    history_file=$(mktemp "${TMPDIR:-/tmp}/facet-history-XXXXXXXX")
+    python3 -c "
+import json, os, sys, glob
+from datetime import datetime
+
+durations = {'generate': [], 'simulate': [], 'analyze': [], 'cross-synthesize': []}
+
+for status_file in glob.glob('${SCRIPT_DIR}/output/**/.status', recursive=True):
+    phases = {}
+    try:
+        with open(status_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line: continue
+                obj = json.loads(line)
+                phase = obj.get('phase', '')
+                status = obj.get('status', '')
+                ts = obj.get('timestamp', '')
+                count = obj.get('count', 0)
+                if ts and phase:
+                    key = (phase, status)
+                    phases[key] = {'ts': ts, 'count': count}
+    except (json.JSONDecodeError, IOError):
+        continue
+
+    for phase_name in durations:
+        started = phases.get((phase_name, 'started'))
+        completed = phases.get((phase_name, 'complete'))
+        if started and completed:
+            try:
+                t1 = datetime.fromisoformat(started['ts'].replace('Z', '+00:00'))
+                t2 = datetime.fromisoformat(completed['ts'].replace('Z', '+00:00'))
+                dur = (t2 - t1).total_seconds()
+                count = completed.get('count', 1)
+                if dur > 0 and count > 0 and phase_name in ('generate', 'simulate'):
+                    durations[phase_name].append(dur / count)
+                elif dur > 0:
+                    durations[phase_name].append(dur)
+            except (ValueError, TypeError):
+                pass
+
+for phase_name, vals in durations.items():
+    if vals:
+        avg = sum(vals) / len(vals)
+        print(f'{phase_name}={avg:.0f}')
+" > "$history_file" 2>/dev/null
+
+    # Override baselines with historical data if available
+    while IFS='=' read -r phase_name avg_val; do
+        case "$phase_name" in
+            generate) avg_gen_per_persona="$avg_val" ;;
+            simulate) avg_sim_per_persona="$avg_val" ;;
+            analyze) avg_analysis="$avg_val" ;;
+            cross-synthesize) avg_cross_synth="$avg_val" ;;
+        esac
+    done < "$history_file"
+    rm -f "$history_file"
+
+    # Calculate estimates
+    local waves=$(( (personas + 4) / 5 ))  # wave size = 5
+    local gen_time=$(( waves * avg_gen_per_persona ))  # wave-serial, not fully parallel
+    local sim_time_per_ex=$(( (personas + concurrency - 1) / concurrency * avg_sim_per_persona ))
+    local analysis_time_per_ex="$avg_analysis"
+    local total_exercise_time=$(( exercises * (sim_time_per_ex + analysis_time_per_ex) ))
+    local total=$(( gen_time + total_exercise_time + avg_cross_synth ))
+
+    # Format as minutes
+    local minutes=$(( (total + 59) / 60 ))
+    echo "Estimated time: ~${minutes} min (${personas} personas, ${exercises} exercises, concurrency ${concurrency})"
+}
+
 # --- Phase: Plan ---
 run_plan() {
     local config="$1"
@@ -730,6 +813,9 @@ main() {
             cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
             echo "Templates version-locked to ${study_dir}/.templates/"
 
+            local total_personas
+            total_personas=$(( $(parse_frontmatter "$config" "segments") * $(parse_frontmatter "$config" "personas_per_segment") ))
+
             echo ""
             echo "FACET SIMULATION ENGINE v2"
             echo "Config: $(basename "$config")"
@@ -741,6 +827,7 @@ main() {
                     echo "Calibration: $(basename "$calibration")"
                 fi
             fi
+            estimate_time "$total_personas" 0 "$concurrency"
             echo ""
             run_plan "$config" "$study_dir" "$calibration"
             run_generate "$config" "$study_dir" "$concurrency" "$calibration"
@@ -783,11 +870,15 @@ main() {
             fi
             echo "Templates version-locked to ${exercise_dir}/.templates/"
 
+            local ex_persona_count
+            ex_persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+
             echo ""
             echo "FACET SIMULATION ENGINE v2"
             echo "Study: $(basename "$study_dir")"
             echo "Exercise: ${exercise_name}"
             echo "Config: $(basename "$config")"
+            estimate_time "$ex_persona_count" 1 "$concurrency"
             echo ""
 
             run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
@@ -875,6 +966,7 @@ main() {
             echo "║  FACET STUDY                                   ║"
             echo "║  Exercises: ${exercise_count}, Personas: $((segments * per_segment))                   ║"
             echo "╚═══════════════════════════════════════════════╝"
+            estimate_time "$((segments * per_segment))" "$exercise_count" "$concurrency"
             echo ""
 
             # Phase 1: Init (skip if personas already exist)
