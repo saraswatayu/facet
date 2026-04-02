@@ -98,6 +98,14 @@ echo '<JSON>' | python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-
 
 If it exits non-zero, read stderr and tell the user what went wrong. Offer to fix it.
 
+**Config Neutrality Check (before presenting to user):**
+Read the generated exercise config. Compare option descriptions. If one option has
+significantly more detail than others (3x+ word count), warn the user:
+"Option A has much more detail than Option B. This can bias the study. Want to
+balance the descriptions before running?"
+This is the most common source of biased results. The study is only as fair as
+the option descriptions.
+
 Present the study design for approval:
 "Here's the study I'll run: [study type], [segments] segments, [personas] personas
 per segment, testing [options]. Calibrated with [summary of context].
@@ -119,13 +127,41 @@ Pass the subagent all the context it needs:
 
 The subagent will:
 1. Run `sim.sh study` with the config
-2. Read output files when complete
-3. Present the Persona Gallery and Finding Spotlight
-4. Offer the follow-up loop
-5. Update its persistent memory with this study's results
+2. Run the Persona Validation Phase (Step 4b)
+3. Read output files when complete
+4. Present the Persona Gallery and Finding Spotlight (with quality checks)
+5. Offer the follow-up loop
+6. Update its persistent memory with this study's results
 
 The subagent has the facet skill preloaded and follows the same voice and writing
 rules defined below.
+
+### Step 4b: Persona Validation Phase (after init, before exercise)
+
+After `sim.sh init` generates personas (or after `sim.sh study` completes the init
+phase), read ALL persona files and run a quality gate before the simulation phase
+burns API credits. Check:
+
+1. **Sycophancy pre-check:** Count how many personas have deal-breakers vs. how many
+   are set up to be enthusiastic. If >70% look predisposed to like the product, flag it.
+   Research: 17-57% sycophancy rate even with anti-sycophancy instructions (Sharma et al.).
+
+2. **Homogeneity check:** Read all persona files. Are the voices distinct? Look for:
+   repeated phrasing patterns, similar income ranges, same discovery channels, similar
+   Big Five profiles. If 3+ personas feel interchangeable, flag for regeneration.
+   Research: LLM samples have 30-50% less variance than real humans (Bisbee et al.).
+
+3. **Numerical plausibility:** Does the $38K/year school admin have 6 active
+   subscriptions totaling $200/month? Does the freelancer in Detroit have a $4,000/month
+   apartment? Cross-check incomes, expenses, and location against each other.
+
+4. **Demographic representation:** Check the persona set against the plan's diversity
+   matrix. Are all segments represented? Any age bracket missing? Any income range
+   over-concentrated?
+
+If issues are found, report to the user: "I found [N] quality issues in the persona
+panel. [Issue descriptions]. Want me to regenerate the flagged personas before running
+simulations?" This saves money by catching problems before the expensive simulation phase.
 
 ### If Running Without the Subagent (fallback)
 
@@ -183,6 +219,29 @@ the previous one, and the conclusion feels inevitable by the third.
 **Honest-failure caveat.** One sentence. Not a legal disclaimer.
 "48 synthetic personas. The patterns are plausible; the people aren't. Use this to
 sharpen your questions for real interviews, not to make the decision."
+
+**Quality Checks (run silently, report only if issues found):**
+
+1. **Sycophancy audit:** Count positive vs negative verdicts across all simulations.
+   If >70% of personas gave positive verdicts, flag: "Sycophancy warning: [X]% of
+   personas liked the product. Real studies rarely show this level of enthusiasm.
+   Treat positive findings with extra skepticism."
+   Research: RLHF-trained models agree 17-57% of the time even with anti-sycophancy
+   instructions. >70% positive is a red flag.
+
+2. **Stated vs revealed preference:** Read simulation files. Look for personas who
+   said "I'd switch/buy/sign up" but whose background shows high status quo bias,
+   subscription fatigue, or deal-breakers that weren't honored. Flag the gap:
+   "3 personas claimed they'd sign up but their behavioral profiles suggest otherwise.
+   Real conversion is likely lower than the headline number."
+   Research: Aaru/EY found stated-vs-revealed gap is the highest-value insight.
+
+3. **Demographic confidence:** Check which segments drove the key findings. If findings
+   depend heavily on personas from underrepresented populations (rural, low-income,
+   non-Western, elderly, non-English-speaking), add a targeted caveat:
+   "The [finding] is driven primarily by [segment]. LLM personas for this demographic
+   are less reliable. Prioritize real-user validation for this specific finding."
+   Research: Verasight 2025, systematic bias for underrepresented groups.
 
 ### Step 7: Follow-Up Loop
 
