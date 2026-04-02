@@ -346,7 +346,6 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
 
         local running=0
         local pids=()
-        local wave_failures=0
 
         for i in $(seq "$wave_start" "$wave_end"); do
             local padded
@@ -414,22 +413,15 @@ Write the complete persona background to: ${output_path}" \
 
             # Throttle concurrency within wave
             if [ "$running" -ge "$concurrency" ]; then
-                if ! wait -n 2>/dev/null; then
-                    ((wave_failures++)) || true
-                fi
+                wait -n 2>/dev/null || true
                 ((running--)) || true
             fi
         done
 
-        # Wait for entire wave to complete and track failures
+        # Wait for entire wave to complete
         for pid in "${pids[@]}"; do
-            if ! wait "$pid" 2>/dev/null; then
-                ((wave_failures++)) || true
-            fi
+            wait "$pid" 2>/dev/null || true
         done
-        if [ "$wave_failures" -gt 0 ]; then
-            echo "  WARNING: ${wave_failures} persona(s) failed in wave ${wave}"
-        fi
 
         # Build summaries from this wave for the next wave's diversity context
         for i in $(seq "$wave_start" "$wave_end"); do
@@ -516,7 +508,6 @@ run_simulate() {
 
     local running=0
     local pids=()
-    local sim_failures=0
 
     for persona_file in "${panel_dir}/personas"/persona-*.md; do
         local base_name
@@ -567,22 +558,15 @@ Also write the structured summary (see the STRUCTURED SUMMARY section in the sim
 
         # Throttle concurrency
         if [ "$running" -ge "$concurrency" ]; then
-            if ! wait -n 2>/dev/null; then
-                ((sim_failures++)) || true
-            fi
+            wait -n 2>/dev/null || true
             ((running--)) || true
         fi
     done
 
-    # Wait for all remaining simulations and track failures
+    # Wait for all remaining simulations
     for pid in "${pids[@]}"; do
-        if ! wait "$pid" 2>/dev/null; then
-            ((sim_failures++)) || true
-        fi
+        wait "$pid" 2>/dev/null || true
     done
-    if [ "$sim_failures" -gt 0 ]; then
-        echo "  WARNING: ${sim_failures} simulation(s) failed"
-    fi
 
     local completed
     completed=$(count_files "$simulations_dir" "persona-*.md")
