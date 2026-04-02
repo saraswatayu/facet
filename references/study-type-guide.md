@@ -35,9 +35,9 @@ Personas use whatever decision-making is natural to their background.
 
 ## Multi-Exercise Studies
 
-Some questions need multiple exercises. Common combos:
-- "Should we launch this?" → concept reactions + pricing + features (3 exercises)
-- "How should we price AND onboard?" → pricing + onboarding (2 exercises)
-- "Full product audit" → onboarding + features + pricing + retention (4 exercises)
+Some questions need multiple studies. Common combos:
+- "Should we launch this?" → concept reactions + pricing + features (3 studies)
+- "How should we price AND onboard?" → pricing + onboarding (2 studies)
+- "Full product audit" → onboarding + features + pricing + retention (4 studies)
 
-See study-templates/ for pre-built multi-exercise configurations.
+See study-templates/ for pre-built multi-study configurations.

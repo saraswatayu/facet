@@ -129,9 +129,9 @@ study-templates/        — 5 pre-built study configs (concept, pricing, activat
 
 **Product config** (for `init`): Markdown with YAML frontmatter containing `segments` and `personas_per_segment`. Body describes product, key details, target market.
 
-**Study config** (for `study`): Markdown with YAML frontmatter containing `exercise_name`, `study_type`, `options`, and optionally `copy_variants`. Body has options detail and copy variants.
+**Study config** (for `study`): Markdown with YAML frontmatter containing `study_name`, `study_type`, `options`, and optionally `copy_variants`. Body has options detail and copy variants.
 
-**Full run config** (for `run`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `exercises` array. Each exercise entry has a `config` path (relative to the config file). Body is the product description (doubles as product config for init).
+**Full run config** (for `run`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `studies` array. Each study entry has a `config` path (relative to the config file). Body is the product description (doubles as product config for init).
 
 See `examples/` for study/product configs, `study-templates/` for full run configs.
 

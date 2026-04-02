@@ -20,7 +20,7 @@ studies:
 
 ## Study Goal
 
-Answer: "How should we price this?" Deep-dive into 2-3 pricing models with a large persona set. Single exercise, maximum depth.
+Answer: "How should we price this?" Deep-dive into 2-3 pricing models with a large persona set. Single study, maximum depth.
 
 ## Exercise Config (create this file)
 

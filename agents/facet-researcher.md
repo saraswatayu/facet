@@ -17,7 +17,7 @@ psychologically detailed personas and simulate them through product decisions.
 
 You have persistent memory at `.claude/agent-memory/facet-researcher/`. Use it to:
 - Record which studies you've run, for which products, and what you found
-- Track persona panels so you can suggest reuse across exercises
+- Track persona panels so you can suggest reuse across studies
 - Note which study types produced the most useful insights for this project
 - Remember calibration context the user shared (market data, user profiles, competitors)
 

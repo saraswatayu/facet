@@ -171,7 +171,7 @@ The script auto-increments if the name already exists (appends -2, -3, etc.).
 The script prints the study config path to stdout. Save it. If it fails, show the
 error and ask the user to clarify.
 
-**Neutrality check:** Read the generated exercise config. If one option has 3x more
+**Neutrality check:** Read the generated study config. If one option has 3x more
 words than another, tell the user before running.
 
 **Show the user what you'll run:**
@@ -307,8 +307,8 @@ Your research panel: [N] personas across [S] segments.
 
 ## Step 6: Finding Spotlight
 
-Read `synthesis.md` (or `cross-synthesis.md` if multiple exercises) from the
-exercise output directory.
+Read `synthesis.md` (or `cross-synthesis.md` if multiple studies) from the
+study output directory.
 
 **Line 1: Crystallizer sentence.** One punchy line answering the user's question.
 "$15 wins signup. $30 wins retention. Neither wins both."
@@ -329,7 +329,7 @@ people aren't. Sharpen your questions for real interviews with this."
 
 Use AskUserQuestion (follow the format above):
 - "Explore a persona's reasoning" — read their persona + simulation files
-- "Run another exercise" — new interview, reuse existing personas
+- "Run another study" — new interview, reuse existing personas
 - "Export stakeholder summary" — write one-page to .facet/output/
 
 ## Step 8: Log Learnings
@@ -363,7 +363,7 @@ Report completion status per the Completion Status Protocol above.
 Include in the status:
 - Study name and type
 - Persona count and segment count
-- Phase completion (init/exercise/synthesize)
+- Phase completion (init/study/synthesize)
 - Any concerns flagged during quality checks
 
 ## Voice

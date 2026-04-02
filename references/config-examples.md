@@ -25,13 +25,13 @@ time tracking, invoicing, and client portals. $15/month basic, $30/month pro.
 - Competitors: Notion ($10/mo), Todoist ($5/mo), Monday.com ($12/seat/mo)
 ```
 
-## Exercise Config (for sim.sh exercise)
+## Study Config (for sim.sh study)
 
-### Pricing exercise
+### Pricing study
 
 ```yaml
 ---
-exercise_name: pricing-tiers
+study_name: pricing-tiers
 study_type: pricing
 options:
   - name: "Basic Plan"
@@ -57,11 +57,11 @@ Every feature, one price. No decision fatigue. The Superhuman model.
 Risk: leaves money on the table from users who'd pay $30.
 ```
 
-### Features exercise
+### Features study
 
 ```yaml
 ---
-exercise_name: ai-features
+study_name: ai-features
 study_type: features
 options:
   - name: "AI Time Estimates"
@@ -93,9 +93,9 @@ payment speed. Helps freelancers focus on high-value relationships.
 ---
 segments: 6
 personas_per_segment: 8
-exercises:
-  - config: exercises/taskflow-pricing.md
-  - config: exercises/taskflow-features.md
+studies:
+  - config: studies/taskflow-pricing.md
+  - config: studies/taskflow-features.md
 ---
 
 # Product: TaskFlow
@@ -109,5 +109,5 @@ TaskFlow is a task management app for freelancers...
 | Config type | Required frontmatter fields |
 |------------|---------------------------|
 | Product | `segments`, `personas_per_segment` |
-| Exercise | `exercise_name`, `study_type`, `options` (array of name+description) |
-| Study | `segments`, `personas_per_segment`, `exercises` (array of config paths) |
+| Study | `study_name`, `study_type`, `options` (array of name+description) |
+| Study | `segments`, `personas_per_segment`, `studies` (array of config paths) |

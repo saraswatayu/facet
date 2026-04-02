@@ -11,7 +11,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts'))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from generate_config import match_study_type, validate_config, generate_exercise_config, generate_study_config, auto_scale, generate_calibration_file
+from generate_config import match_study_type, validate_config, generate_study_config_file, generate_run_config, auto_scale, generate_calibration_file
 from parse_config import parse_frontmatter
 
 
@@ -42,7 +42,7 @@ class TestAutoScale(unittest.TestCase):
         self.assertEqual(pps, 8)
 
     def test_default_without_explicit_count(self):
-        """generate_study_config uses auto_scale when segments/personas_per_segment not provided."""
+        """generate_run_config uses auto_scale when segments/personas_per_segment not provided."""
         data = {
             'product_name': 'TestApp',
             'product_description': 'A test app.',
@@ -51,8 +51,8 @@ class TestAutoScale(unittest.TestCase):
         }
         output_dir = tempfile.mkdtemp(prefix='facet-test-scale-')
         try:
-            ex_path, _ = generate_exercise_config(data, output_dir)
-            study_path = generate_study_config(data, [ex_path], output_dir)
+            ex_path, _ = generate_study_config_file(data, output_dir)
+            study_path = generate_run_config(data, [ex_path], output_dir)
             fm, _ = parse_frontmatter(study_path)
             # A/B question → 5 segments × 5
             self.assertEqual(fm['segments'], 5)
@@ -111,40 +111,40 @@ class TestConfigGeneration(unittest.TestCase):
             ],
         }
 
-    def test_exercise_config_valid(self):
+    def test_study_config_valid(self):
         data = self._base_data()
-        filepath, name = generate_exercise_config(data, self.output_dir)
+        filepath, name = generate_study_config_file(data, self.output_dir)
         self.assertTrue(os.path.exists(filepath))
-        errors = validate_config(filepath, 'exercise')
+        errors = validate_config(filepath, 'study')
         self.assertEqual(errors, [])
 
     def test_study_config_valid(self):
         data = self._base_data()
-        ex_path, _ = generate_exercise_config(data, self.output_dir)
-        study_path = generate_study_config(data, [ex_path], self.output_dir)
+        ex_path, _ = generate_study_config_file(data, self.output_dir)
+        study_path = generate_run_config(data, [ex_path], self.output_dir)
         self.assertTrue(os.path.exists(study_path))
-        errors = validate_config(study_path, 'study')
+        errors = validate_config(study_path, 'run')
         self.assertEqual(errors, [])
 
     def test_study_config_has_required_fields(self):
         data = self._base_data()
-        ex_path, _ = generate_exercise_config(data, self.output_dir)
-        study_path = generate_study_config(data, [ex_path], self.output_dir)
+        ex_path, _ = generate_study_config_file(data, self.output_dir)
+        study_path = generate_run_config(data, [ex_path], self.output_dir)
 
         fm, body = parse_frontmatter(study_path)
 
         self.assertEqual(fm['segments'], 4)
         self.assertEqual(fm['personas_per_segment'], 6)
-        self.assertIn('exercises', fm)
+        self.assertIn('studies', fm)
         self.assertIn('TestApp', body)
 
-    def test_exercise_config_has_required_fields(self):
+    def test_study_config_has_required_fields(self):
         data = self._base_data()
-        filepath, _ = generate_exercise_config(data, self.output_dir)
+        filepath, _ = generate_study_config_file(data, self.output_dir)
 
         fm, _ = parse_frontmatter(filepath)
 
-        self.assertEqual(fm['exercise_name'], 'testapp-pricing')
+        self.assertEqual(fm['study_name'], 'testapp-pricing')
         self.assertEqual(fm['study_type'], 'pricing')
         self.assertIsInstance(fm['options'], list)
         self.assertEqual(len(fm['options']), 2)
@@ -152,15 +152,15 @@ class TestConfigGeneration(unittest.TestCase):
     def test_empty_options_fails_validation(self):
         data = self._base_data()
         data['options'] = []
-        filepath, _ = generate_exercise_config(data, self.output_dir)
-        errors = validate_config(filepath, 'exercise')
+        filepath, _ = generate_study_config_file(data, self.output_dir)
+        errors = validate_config(filepath, 'study')
         self.assertTrue(any('non-empty' in e for e in errors))
 
     def test_long_description_truncated(self):
         data = self._base_data()
         data['product_description'] = ' '.join(['word'] * 600)
-        ex_path, _ = generate_exercise_config(data, self.output_dir)
-        study_path = generate_study_config(data, [ex_path], self.output_dir)
+        ex_path, _ = generate_study_config_file(data, self.output_dir)
+        study_path = generate_run_config(data, [ex_path], self.output_dir)
         with open(study_path) as f:
             content = f.read()
         # Body should be truncated to ~500 words + ...
@@ -172,8 +172,8 @@ class TestConfigGeneration(unittest.TestCase):
     def test_calibration_context_generates_file(self):
         data = self._base_data()
         data['calibration_context'] = 'Users pay $5-15 for similar tools.'
-        ex_path, _ = generate_exercise_config(data, self.output_dir)
-        generate_study_config(data, [ex_path], self.output_dir)
+        ex_path, _ = generate_study_config_file(data, self.output_dir)
+        generate_run_config(data, [ex_path], self.output_dir)
         cal_path = os.path.join(self.output_dir, 'calibration.md')
         generate_calibration_file(data['calibration_context'], self.output_dir)
         self.assertTrue(os.path.exists(cal_path))

@@ -1,8 +1,8 @@
 # Per-Persona Simulation Instructions
 
-You are running a behavioral simulation for a single persona through a product exercise. The persona's background (identity, psychology, domain profile, discovery) has already been generated separately. Your job is to simulate this persona's experience with each option being tested.
+You are running a behavioral simulation for a single persona through a product study. The persona's background (identity, psychology, domain profile, discovery) has already been generated separately. Your job is to simulate this persona's experience with each option being tested.
 
-The exercise config, persona background file, and study-type rules have been provided as separate files — you should have already read them before reading this template.
+The study config, persona background file, and study-type rules have been provided as separate files — you should have already read them before reading this template.
 
 ---
 
@@ -27,7 +27,7 @@ This simulation must read as a continuation of the persona's story. The persona'
 
 ## Your Task
 
-Read the persona background file and the exercise config. Then simulate this persona's experience with each option and write the results to the output path specified in your instructions.
+Read the persona background file and the study config. Then simulate this persona's experience with each option and write the results to the output path specified in your instructions.
 
 The simulation file should begin with a header identifying the persona (name, ID, segment) and then proceed through the following sections.
 
@@ -37,7 +37,7 @@ The simulation file should begin with a header identifying the persona (name, ID
 
 ### OPTION SIMULATIONS
 
-**Create one section per option defined in the exercise config.** For each option:
+**Create one section per option defined in the study config.** For each option:
 
 #### Signup/Purchase Decision
 
@@ -116,9 +116,9 @@ Structured decision summary using Beliefs-Desires-Intentions:
 
 ---
 
-### COPY VARIANT REACTIONS (only if copy variants are defined in the exercise config)
+### COPY VARIANT REACTIONS (only if copy variants are defined in the study config)
 
-For each copy variant defined in the exercise config:
+For each copy variant defined in the study config:
 
 - **Internal monologue** when reading it (in character, using their vocabulary and thought patterns — this should feel different from persona to persona)
 - **Scores** on 4 dimensions (0-10 each):
@@ -150,7 +150,7 @@ After all variants: **Final ranking** (best to worst for THIS persona) with one-
 
 After writing the full simulation above, ALSO write a structured summary to the summary output path specified in your instructions. This summary is a compact extraction used by the analysis phase. It must be accurate to the simulation you just wrote.
 
-The summary uses a rigid schema. Every field must be filled. Skip sections marked "skip if..." when the exercise has no relevant data.
+The summary uses a rigid schema. Every field must be filled. Skip sections marked "skip if..." when the study has no relevant data.
 
 ```
 # Simulation Summary: Persona [NNN] — [Name]
@@ -190,7 +190,7 @@ Stated vs. revealed gap: [none / describe if persona says one thing but profile 
 | Referral likelihood | [1-10] |
 | Net value (chosen option) | [$N] |
 
-## Copy Variant Rankings (skip if exercise has no copy variants)
+## Copy Variant Rankings (skip if study has no copy variants)
 [Rank variants best to worst with one-line reason per variant]
 
 ## Referral Behavior

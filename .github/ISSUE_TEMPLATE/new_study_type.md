@@ -1,6 +1,6 @@
 ---
 name: New Study Type
-about: Request or propose a new exercise type
+about: Request or propose a new study type
 labels: enhancement
 ---
 

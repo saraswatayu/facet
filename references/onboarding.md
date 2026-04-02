@@ -48,7 +48,7 @@ The output: which price won, why, and the 5 most interesting personas' reasoning
 - ~20 minutes of simulation time (48 personas, real behavioral psychology)
 - A research panel introduction (5 standout personas)
 - Top findings with honest confidence levels
-- Follow-up options: explore any persona, run another exercise, export for stakeholders
+- Follow-up options: explore any persona, run another study, export for stakeholders
 
 ## Honest Limitations
 

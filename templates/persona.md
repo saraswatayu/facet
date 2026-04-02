@@ -6,7 +6,7 @@ The product config and plan (with segment matrix, persona outlines, and name reg
 
 Find your assigned persona number in the plan's persona outlines. Generate a complete, deeply detailed persona background for that outline.
 
-**Important:** This persona file contains ONLY the person's background — identity, psychology, domain behavior, and discovery story. It does NOT contain option simulations, verdicts, or copy reactions. Those are generated separately as exercises.
+**Important:** This persona file contains ONLY the person's background — identity, psychology, domain behavior, and discovery story. It does NOT contain option simulations, verdicts, or copy reactions. Those are generated separately as studies.
 
 ---
 
@@ -151,7 +151,7 @@ Fix any inconsistencies before writing.
 
 ## What NOT to Include
 
-Do NOT include any of the following (these belong in exercise simulations, not persona backgrounds):
+Do NOT include any of the following (these belong in study simulations, not persona backgrounds):
 - Option simulations or signup decisions
 - 12-month usage projections
 - Verdicts or option preferences

@@ -4,11 +4,11 @@
 
 Custom studies have no predefined behavioral economics framework. The persona reacts using whatever decision-making patterns are natural to their background, psychology, and domain expertise. This gives maximum flexibility for research questions that don't fit existing study types (pricing, copy, features, onboarding, retention).
 
-The tradeoff: without a structured framework, simulation quality depends entirely on the exercise config providing enough context for the persona to react meaningfully. Write detailed option descriptions. Explain what you want to learn. The exercise config body IS the framework.
+The tradeoff: without a structured framework, simulation quality depends entirely on the study config providing enough context for the persona to react meaningfully. Write detailed option descriptions. Explain what you want to learn. The study config body IS the framework.
 
 ## What This Study Tests
 
-Whatever the exercise config describes. Common uses:
+Whatever the study config describes. Common uses:
 - Concept reactions ("Would you use this?")
 - Trust and safety evaluations
 - Job impact / displacement concerns
@@ -20,7 +20,7 @@ Whatever the exercise config describes. Common uses:
 
 ### Per-Persona Evaluation
 
-For each option in the exercise config, the persona provides:
+For each option in the study config, the persona provides:
 - **Gut reaction**: First emotional response (excitement, fear, skepticism, indifference, confusion)
 - **Reasoning**: Why they feel this way, grounded in their background and psychology
 - **Verdict**: Their decision or preference, with specific justification
@@ -51,4 +51,4 @@ In the synthesis, produce:
 - **Segment patterns**: Which segments react similarly, which diverge
 - **Key concerns**: The top objections across all personas, ranked by frequency
 - **Surprise findings**: Reactions that contradict expectations or reveal hidden dynamics
-- **Recommended action**: What the exercise results suggest the company should do
+- **Recommended action**: What the study results suggest the company should do
