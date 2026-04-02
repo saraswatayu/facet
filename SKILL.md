@@ -4,6 +4,7 @@ description: Run product research studies with AI-generated personas. Simulates 
 argument-hint: "[research question]"
 allowed-tools: Bash, Read, Write, Glob, Grep
 disable-model-invocation: true
+effort: high
 ---
 
 # /facet
@@ -13,6 +14,14 @@ Do not improvise the flow. Do not skip steps. Do not design studies in your head
 Use the scripts and commands specified below.
 
 The user's question: $ARGUMENTS
+
+## Project Context (auto-loaded)
+
+Previous studies: !`ls .facet/output/ 2>/dev/null || echo "none yet"`
+Recent project changes: !`git log --oneline -5 2>/dev/null || echo "no git history"`
+
+Use this context: if studies exist, mention them and offer persona reuse. If recent
+changes relate to pricing/features/onboarding, reference them in the codebase scan.
 
 ## Setup (run once per project)
 
@@ -194,7 +203,7 @@ exercise output directory.
 **Caveat.** One sentence: "48 synthetic personas. The patterns are plausible; the
 people aren't. Sharpen your questions for real interviews with this."
 
-**Silent quality checks (report only if triggered):**
+**Silent quality checks (ultrathink — use deep reasoning here):**
 - If >70% positive verdicts: "Sycophancy warning: [X]% liked it. Real studies rarely
   show this. Treat positives with skepticism."
 - If personas said "I'd buy" but have high status quo bias: "Real conversion likely
