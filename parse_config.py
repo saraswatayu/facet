@@ -22,8 +22,19 @@ def parse_frontmatter(filepath):
     if not content.startswith('---'):
         return {}, content
 
-    # Find the closing ---
-    end = content.find('---', 3)
+    # Find the closing --- at the start of a line
+    # (content.find('---', 3) would match '---' inside YAML string values)
+    end = -1
+    search_start = 3
+    while True:
+        pos = content.find('---', search_start)
+        if pos == -1:
+            break
+        # Must be at start of line (pos == 0 already handled, check for \n before)
+        if pos > 0 and content[pos - 1] == '\n':
+            end = pos
+            break
+        search_start = pos + 3
     if end == -1:
         return {}, content
 

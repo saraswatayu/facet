@@ -84,6 +84,15 @@ options:
         self.assertEqual(len(fm['options']), 2)
         self.assertEqual(fm['options'][0]['name'], 'Option A')
 
+    def test_triple_dash_in_yaml_value(self):
+        """Ensure --- inside a YAML string value doesn't break frontmatter parsing."""
+        content = '---\nstudy_name: pricing\ndescription: "this---premium---option"\n---\n# Body\n'
+        path = self._write_temp(content)
+        fm, body = parse_frontmatter(path)
+        self.assertEqual(fm['study_name'], 'pricing')
+        self.assertEqual(fm['description'], 'this---premium---option')
+        self.assertIn('# Body', body)
+
 
 if __name__ == '__main__':
     unittest.main()
