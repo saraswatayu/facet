@@ -75,6 +75,23 @@ Personas are generated once and reused across exercises. A pricing exercise and 
 | `--study` | Path to existing study directory | — |
 | `--concurrency` | Parallel persona generations/simulations | 5 |
 | `--calibration` | Real research data to ground personas ([details](#calibration)) | — |
+| `--output-dir` | Override base output directory | `./output/` |
+
+### Claude Code Skill
+
+If you use Claude Code, install Facet as a skill for a conversational experience:
+
+```bash
+git clone https://github.com/saraswatayu/facet.git ~/.claude/skills/facet
+```
+
+Then ask a product question:
+
+```
+/facet "Should I charge $15 or $30/month for my task management app?"
+```
+
+The skill scans your codebase for relevant data, asks 2-3 calibration questions, generates a study config, runs the simulation, and delivers findings with a research panel introduction and honest confidence levels. No config files to write.
 
 ---
 
