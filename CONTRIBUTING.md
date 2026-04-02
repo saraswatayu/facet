@@ -37,8 +37,8 @@ Add new exercise types (beyond pricing, copy, features) by creating `study-types
 - Outcome requirements (e.g., "at least 1 persona should reject all options")
 
 **Also needed:**
-- An example exercise config in `examples/`
-- Test the full pipeline: `./sim.sh init` → `./sim.sh exercise` → check synthesis quality
+- An example study config in `examples/`
+- Test the full pipeline: `./sim.sh init` → `./sim.sh study` → check synthesis quality
 
 ### Code Changes
 
@@ -63,7 +63,7 @@ The `research/` directory contains reports synthesizing ~490 academic sources. T
 3. Run an example study:
    ```bash
    ./sim.sh init --config examples/superhuman-product.md --name test
-   ./sim.sh exercise --study output/test/ --config examples/superhuman-pricing.md
+   ./sim.sh study --panel output/test/ --config examples/superhuman-pricing.md
    ```
 4. Check output in `output/test/`
 

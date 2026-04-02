@@ -2,8 +2,8 @@
 segments: 6
 personas_per_segment: 5
 exercises:
-  - config: exercises/positioning-variants.md
-  - config: exercises/feature-differentiation.md
+  - config: studies/positioning-variants.md
+  - config: studies/feature-differentiation.md
 ---
 
 # Product: [Your Product Name]
@@ -25,7 +25,7 @@ Answer: "Where do we fit?" Test positioning/messaging variants and feature diffe
 
 ## Exercise Configs (create these files)
 
-### exercises/positioning-variants.md
+### studies/positioning-variants.md
 ```yaml
 ---
 exercise_name: positioning-variants
@@ -41,7 +41,7 @@ options:
 [Context about your positioning challenge]
 ```
 
-### exercises/feature-differentiation.md
+### studies/feature-differentiation.md
 ```yaml
 ---
 exercise_name: feature-differentiation

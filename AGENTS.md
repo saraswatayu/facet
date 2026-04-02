@@ -8,9 +8,9 @@ Six-command pipeline:
 
 ```
 sim.sh init:       Plan (Opus) → Generate (Sonnet, parallel waves)
-sim.sh exercise:   Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
+sim.sh study:   Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
 sim.sh synthesize: Cross-Synthesis (Opus) — unified findings across exercises
-sim.sh study:      Full lifecycle — init + all exercises + synthesize (single command)
+sim.sh study:      Full lifecycle — init + all studies + synthesize (single command)
 sim.sh compare:    Diff findings between two study runs
 sim.sh status:     Study progress, exercise completion, cross-synthesis readiness
 ```
@@ -18,7 +18,7 @@ sim.sh status:     Study progress, exercise completion, cross-synthesis readines
 Primary interface:
 - **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `Codex --print` subprocess.
 
-Key design: personas are generated ONCE and reused across multiple exercises. The `study` subcommand reads a single study config containing all exercises and runs the full pipeline.
+Key design: personas are generated ONCE and reused across multiple studies. The `study` subcommand reads a single study config containing all studies and runs the full pipeline.
 
 ### Model Routing
 
@@ -77,7 +77,7 @@ Each study type also has outcome requirements (e.g., "at least 1 persona should 
 
 Templates are copied into `.templates/` directories at init and exercise time:
 - `output/{name}/.templates/` gets `plan.md` + `persona.md` at init
-- `output/{name}/exercises/{exercise}/.templates/` gets `simulation.md` + `analysis.md` + `{study-type}.md` at exercise time
+- `output/{name}/studies/{exercise}/.templates/` gets `simulation.md` + `analysis.md` + `{study-type}.md` at exercise time
 
 This means existing studies are reproducible even if source templates change. Contributors modifying templates don't break past studies.
 
@@ -101,7 +101,7 @@ templates/
   persona.md            — persona background generation (identity, psychology, domain, discovery)
   simulation.md         — per-persona exercise simulation (Chain-of-Feeling, BDI verdicts)
   analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files)
-  cross-synthesis.md    — cross-exercise synthesis → unified findings across all exercises
+  cross-synthesis.md    — cross-study synthesis → unified findings across all studies
   comparison.md         — study comparison → stable vs fragile findings
   stability.md          — simulation stability report → per-persona consistency
 study-types/
@@ -145,11 +145,11 @@ output/{product}/
 │   ├── persona-001.md              # background ONLY (identity, psychology, domain, discovery)
 │   └── ...
 ├── .status                         # JSON-line phase completion tracking
-├── cross-synthesis.md              # unified findings across all exercises
-└── exercises/
+├── cross-synthesis.md              # unified findings across all studies
+└── studies/
     └── {exercise-name}/
         ├── .templates/             # version-locked exercise templates
-        ├── exercise.md             # copy of exercise config
+        ├── exercise.md             # copy of study config
         ├── simulations/
         │   ├── persona-001.md      # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
         │   └── ...
@@ -175,8 +175,8 @@ These are invariants — do not break them:
 
 1. Create `study-types/{name}.md` following the pattern in existing study types
 2. Include: caveat section, what it tests, simulation framework, per-persona metrics, outcome requirements
-3. Create an example exercise config in `examples/` with matching `study_type` in frontmatter
-4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh exercise --study output/test/ --config examples/your-exercise.md`
+3. Create an example study config in `examples/` with matching `study_type` in frontmatter
+4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh study --panel output/test/ --config examples/your-exercise.md`
 5. Review the synthesis — does it produce actionable recommendations?
 
 No code changes needed in sim.sh — it reads `study_type` from frontmatter and loads `study-types/{type}.md` automatically.

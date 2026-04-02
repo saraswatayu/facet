@@ -2,8 +2,8 @@
 segments: 6
 personas_per_segment: 5
 exercises:
-  - config: exercises/onboarding-flows.md
-  - config: exercises/feature-discovery.md
+  - config: studies/onboarding-flows.md
+  - config: studies/feature-discovery.md
 ---
 
 # Product: [Your Product Name]
@@ -26,7 +26,7 @@ Answer: "How should we onboard users?" Test 2-3 onboarding flows and feature dis
 
 ## Exercise Configs (create these files)
 
-### exercises/onboarding-flows.md
+### studies/onboarding-flows.md
 ```yaml
 ---
 exercise_name: onboarding-flows
@@ -42,7 +42,7 @@ options:
 [Context about your activation challenge and what you want to learn]
 ```
 
-### exercises/feature-discovery.md
+### studies/feature-discovery.md
 ```yaml
 ---
 exercise_name: feature-discovery

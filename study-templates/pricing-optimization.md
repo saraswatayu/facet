@@ -2,7 +2,7 @@
 segments: 8
 personas_per_segment: 5
 exercises:
-  - config: exercises/pricing-models.md
+  - config: studies/pricing-models.md
 ---
 
 # Product: [Your Product Name]
@@ -24,7 +24,7 @@ Answer: "How should we price this?" Deep-dive into 2-3 pricing models with a lar
 
 ## Exercise Config (create this file)
 
-### exercises/pricing-models.md
+### studies/pricing-models.md
 ```yaml
 ---
 exercise_name: pricing-models

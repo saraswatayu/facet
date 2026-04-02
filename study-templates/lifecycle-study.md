@@ -2,10 +2,10 @@
 segments: 8
 personas_per_segment: 5
 exercises:
-  - config: exercises/onboarding.md
-  - config: exercises/features.md
-  - config: exercises/pricing.md
-  - config: exercises/retention.md
+  - config: studies/onboarding.md
+  - config: studies/features.md
+  - config: studies/pricing.md
+  - config: studies/retention.md
 ---
 
 # Product: [Your Product Name]
@@ -29,7 +29,7 @@ Full product audit. Test onboarding, feature importance, pricing, and retention 
 
 ## Exercise Configs (create these files)
 
-### exercises/onboarding.md
+### studies/onboarding.md
 ```yaml
 ---
 exercise_name: onboarding
@@ -43,7 +43,7 @@ options:
 [Your onboarding challenge and what you want to learn]
 ```
 
-### exercises/features.md
+### studies/features.md
 ```yaml
 ---
 exercise_name: features
@@ -59,7 +59,7 @@ options:
 [Which features matter most and why]
 ```
 
-### exercises/pricing.md
+### studies/pricing.md
 ```yaml
 ---
 exercise_name: pricing
@@ -73,7 +73,7 @@ options:
 [Your pricing question]
 ```
 
-### exercises/retention.md
+### studies/retention.md
 ```yaml
 ---
 exercise_name: retention

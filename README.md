@@ -56,12 +56,12 @@ cd facet
 # 1. Generate personas for your product
 ./sim.sh init --config examples/superhuman-product.md --name superhuman
 
-# 2. Run exercises against those personas
-./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md
-./sim.sh exercise --study output/superhuman/ --config examples/superhuman-copy.md
+# 2. Run studies against those personas
+./sim.sh study --panel output/superhuman/ --config examples/superhuman-pricing.md
+./sim.sh study --panel output/superhuman/ --config examples/superhuman-copy.md
 
 # 3. Check status
-./sim.sh status --study output/superhuman/
+./sim.sh status --panel output/superhuman/
 ```
 
 Personas are generated once and reused across exercises. A pricing exercise and a copy exercise share the same persona backgrounds.
@@ -70,7 +70,7 @@ Personas are generated once and reused across exercises. A pricing exercise and 
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--config` | Product config (init) or exercise config (exercise) | required |
+| `--config` | Product config (init) or study config (exercise) | required |
 | `--name` | Study name for output directory | config filename |
 | `--study` | Path to existing study directory | — |
 | `--concurrency` | Parallel persona generations/simulations | 5 |
@@ -254,7 +254,7 @@ output/{product}/
 ├── personas/                  # generated once, reused
 │   ├── persona-001.md
 │   └── ...
-└── exercises/
+└── studies/
     └── {exercise-name}/
         ├── simulations/
         │   ├── persona-001.md # decision arcs, verdicts
@@ -267,7 +267,7 @@ output/{product}/
 
 - **Illusion of depth.** "$38,500/year, $18.50/hour" is plausible fiction, not data. The richer the output, the easier it is to forget this.
 - **Can't know what it can't know.** Real users have DIY workarounds and half-formed habits no LLM can simulate.
-- **Config bias.** If your exercise config describes Option A more favorably, the entire simulation leans toward A.
+- **Config bias.** If your study config describes Option A more favorably, the entire simulation leans toward A.
 - **Run-to-run variance.** Identical parameters can produce different results.
 - **WEIRD bias.** LLMs are overtrained on English-language, Western, educated, middle-class perspectives.
 
