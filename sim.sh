@@ -954,7 +954,7 @@ main() {
         case "$1" in
             --config) config="$2"; shift 2 ;;
             --panel) panel_dir="$2"; shift 2 ;;
-            --panel2) panel_dir2="$2"; shift 2 ;;
+            --compare-to) panel_dir2="$2"; shift 2 ;;
             --name) study_name="$2"; shift 2 ;;
             --concurrency) concurrency="$2"; shift 2 ;;
             --calibration) calibration="$2"; shift 2 ;;
@@ -1216,8 +1216,8 @@ Write the stability report to: ${study_dir}/stability-report.md" \
             echo "Results: ${panel_dir}/cross-synthesis.md"
             ;;
         compare)
-            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --panel2 <dir2>"; exit 1; }
-            [ -z "$panel_dir2" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --panel2 <dir2>"; exit 1; }
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --compare-to <dir2>"; exit 1; }
+            [ -z "$panel_dir2" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --compare-to <dir2>"; exit 1; }
 
             # Resolve panel_dir2 to absolute path
             if [[ "$panel_dir2" != /* ]]; then
@@ -1475,7 +1475,7 @@ Write the comparison to: ${compare_output}" \
             echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
             echo "  ./sim.sh study       --panel <dir> --config <study-config> [--concurrency N] [--runs N]"
             echo "  ./sim.sh synthesize  --panel <dir>"
-            echo "  ./sim.sh compare     --panel <dir1> --panel2 <dir2>"
+            echo "  ./sim.sh compare     --panel <dir1> --compare-to <dir2>"
             echo "  ./sim.sh run         --config <full-study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
             echo "  ./sim.sh status      --panel <dir>"
             echo ""
@@ -1495,7 +1495,7 @@ Write the comparison to: ${compare_output}" \
             echo "  --calibration Path to calibration data file OR directory"
             echo "  --continue-on-error Skip failed studies instead of halting (run command only)"
             echo "  --runs        Number of simulation runs for stability testing (default: 1)"
-            echo "  --panel2      Path to second panel (compare command only)"
+            echo "  --compare-to  Path to second panel (compare command only)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/superhuman-product.md)"
