@@ -19,9 +19,13 @@ The user's question: $ARGUMENTS
 
 Previous studies: !`ls .facet/output/ 2>/dev/null || echo "none yet"`
 Recent project changes: !`git log --oneline -5 2>/dev/null || echo "no git history"`
+Known issues: !`grep -r "TODO\|FIXME\|HACK" --include="*.py" --include="*.sh" -l ${CLAUDE_SKILL_DIR} 2>/dev/null | head -10 || echo "none"`
+Past learnings: !`cat .facet/learnings.jsonl 2>/dev/null | tail -5 || echo "no learnings yet"`
 
 Use this context: if studies exist, mention them and offer persona reuse. If recent
 changes relate to pricing/features/onboarding, reference them in the codebase scan.
+If learnings exist, incorporate them — mention any that are relevant to the current
+research question.
 
 ## Setup (run once per project)
 
@@ -37,6 +41,75 @@ FACET_ROOT is `${CLAUDE_SKILL_DIR}`. All paths passed to sim.sh MUST be absolute
 
 If `$ARGUMENTS` is empty, read `${CLAUDE_SKILL_DIR}/references/onboarding.md` and
 show it. Stop.
+
+## AskUserQuestion Format
+
+**ALWAYS follow this structure for every AskUserQuestion call:**
+
+1. **Re-ground:** State the project name, what study is running (or about to run),
+   and what step you're on. (1 sentence. Assume the user hasn't looked in 20 minutes.)
+2. **Simplify:** Explain the question in plain English. No internal jargon, no config
+   field names, no implementation details. Say what it DOES, not what it's called.
+3. **Recommend:** `RECOMMENDATION: [X] because [one-line reason]`. Always prefer the
+   option that produces richer research output.
+4. **Options:** Lettered options: `A) ... B) ... C) ...` with time estimates where relevant.
+
+Example:
+> **Re-ground:** Setting up a pricing study for Acme (Step 2, interview).
+> **Simplify:** I need to know what your users pay for similar tools today so the
+> simulated personas have realistic price anchors.
+> **RECOMMENDATION:** Give me 2-3 competitor price points — even rough ones sharpen the results.
+> A) I'll list some competitors and prices
+> B) Skip — use LLM priors (less grounded results)
+
+## Confidence Calibration
+
+When presenting findings from synthesis or cross-synthesis, every finding MUST include
+a confidence indicator:
+
+| Level | Meaning | Display |
+|-------|---------|---------|
+| HIGH | 70%+ of personas converged, consistent across segments | Show normally |
+| MEDIUM | 40-70% convergence, or segment-dependent | Show with caveat: "Mixed signal — varies by segment" |
+| LOW | <40% convergence, or driven by 1-2 outlier personas | Show with caveat: "Weak signal — treat as hypothesis, not conclusion" |
+
+Finding format in the spotlight:
+```
+[HIGH] $15/mo wins signup across all segments.
+[MEDIUM] Annual billing preferred by enterprise, rejected by freelancers.
+[LOW] "Lifetime deal" excited 2 personas but may be survivorship bias.
+```
+
+Suppress LOW findings from the crystallizer sentence. Include them in the expanded
+findings only.
+
+## Completion Status Protocol
+
+When the skill workflow ends, report status using one of:
+
+- **DONE** — Study completed. Findings presented. All phases ran successfully.
+- **DONE_WITH_CONCERNS** — Completed, but with issues. List each: sycophancy warnings,
+  underrepresented segments, config neutrality problems, failed phases.
+- **BLOCKED** — Cannot proceed. State what's blocking and what was tried.
+  (e.g., "sim.sh init failed after 3 retries — API rate limit or malformed config")
+- **NEEDS_CONTEXT** — Missing information required to continue. State exactly what's needed.
+
+### Escalation
+
+It is always OK to stop and say "this study isn't producing useful results."
+
+Bad research is worse than no research. If:
+- A phase fails 3 times → STOP and escalate
+- >80% positive verdicts → flag sycophancy concern, don't present as reliable
+- Personas feel homogeneous despite wave diversity → flag and offer to re-run with more segments
+
+Escalation format:
+```
+STATUS: BLOCKED | NEEDS_CONTEXT
+REASON: [1-2 sentences]
+ATTEMPTED: [what you tried]
+RECOMMENDATION: [what the user should do next]
+```
 
 ## Step 1: Scan the Codebase
 
@@ -212,10 +285,44 @@ people aren't. Sharpen your questions for real interviews with this."
 
 ## Step 7: Follow-Up
 
-Use AskUserQuestion:
+Use AskUserQuestion (follow the format above):
 - "Explore a persona's reasoning" — read their persona + simulation files
 - "Run another exercise" — new interview, reuse existing personas
 - "Export stakeholder summary" — write one-page to .facet/output/
+
+## Step 8: Log Learnings
+
+After the study completes (or fails), reflect:
+- Did any phase fail or produce unexpected output?
+- Did personas feel too similar despite wave diversity?
+- Did the study type feel like a poor fit for the question?
+- Did the config need manual fixes before running?
+- Was there a sycophancy problem (>70% positive)?
+
+If yes, log an operational learning:
+
+```bash
+echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","study":"<STUDY_NAME>","type":"<operational|quality|config>","key":"<SHORT_KEY>","insight":"<DESCRIPTION>","confidence":<1-10>}' >> .facet/learnings.jsonl
+```
+
+Only log genuine discoveries. A good test: would knowing this save 5+ minutes or
+prevent a bad study in a future session? If yes, log it. Don't log transient errors
+(network blips, rate limits).
+
+Examples of good learnings:
+- `{"key":"pricing_needs_anchors","insight":"Pricing studies without competitor price data produce unrealistic WTP. Always ask for 2-3 anchors in the interview.","confidence":8}`
+- `{"key":"8_segments_too_many","insight":"Studies with >6 segments produce shallow personas. Cap at 5-6 for depth.","confidence":7}`
+- `{"key":"copy_needs_full_text","insight":"Copy studies where variants are summarized instead of quoted produce vague reactions. Include full copy text.","confidence":9}`
+
+## Step 9: Report Status
+
+Report completion status per the Completion Status Protocol above.
+
+Include in the status:
+- Study name and type
+- Persona count and segment count
+- Phase completion (init/exercise/synthesize)
+- Any concerns flagged during quality checks
 
 ## Voice
 
@@ -225,3 +332,19 @@ Use AskUserQuestion:
 - Honest not-knowing. "The patterns are plausible; the people aren't."
 - No corporate register. No nominalization. No hedged transitions.
 - Use the user's exact words when referencing their question.
+
+**Banned AI vocabulary** (never use these words):
+delve, crucial, robust, comprehensive, nuanced, multifaceted, furthermore, moreover,
+additionally, pivotal, landscape, tapestry, underscore, foster, showcase, intricate,
+vibrant, fundamental, significant, interplay, elevate, streamline, synergy, leverage (as verb).
+
+**Banned phrases:**
+"here's the kicker", "here's the thing", "plot twist", "let me break this down",
+"the bottom line", "make no mistake", "can't stress this enough", "it's worth noting",
+"at the end of the day", "that said", "having said that", "it goes without saying".
+
+**Writing mechanics:**
+- Short paragraphs. Mix one-sentence paragraphs with 2-3 sentence runs.
+- Name specifics. Real persona names, real numbers, real segments.
+- Be direct about quality. "Strong signal" or "this is noise." Don't hedge.
+- End with what to do next. Give the action.
