@@ -15,7 +15,6 @@ import os
 import re
 import sys
 import tempfile
-from datetime import datetime
 
 import yaml
 

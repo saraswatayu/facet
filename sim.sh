@@ -500,9 +500,9 @@ run_simulate() {
         local output_path="${simulations_dir}/${base_name}.md"
         local summary_path="${simulations_dir}/${base_name}-summary.md"
 
-        # Skip if already generated (check both simulation and summary)
+        # Skip if both simulation and summary already exist
         if [ -s "$output_path" ] && [ -s "$summary_path" ]; then
-            echo "  skip: ${base_name}.md (already exists)"
+            echo "  skip: ${base_name}.md (simulation + summary exist)"
             continue
         fi
 
@@ -552,7 +552,7 @@ Also write the structured summary (see the STRUCTURED SUMMARY section in the sim
     completed=$(count_files "$simulations_dir" "persona-*.md")
     # Exclude summary files from simulation count
     local summary_count
-    summary_count=$(find "$simulations_dir" -name "persona-*-summary.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+    summary_count=$(count_files "$simulations_dir" "persona-*-summary.md")
     completed=$((completed - summary_count))
     local failed=$((total - completed))
 
@@ -580,7 +580,7 @@ run_analyze() {
     local persona_count
     persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
     local summary_count
-    summary_count=$(find "${exercise_dir}/simulations" -name "persona-*-summary.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+    summary_count=$(count_files "${exercise_dir}/simulations" "persona-*-summary.md")
 
     local simulation_instruction
     if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ]; then

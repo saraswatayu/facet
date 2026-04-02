@@ -249,17 +249,12 @@ When complete: TaskUpdate to completed. "Simulations done."
 
 TaskUpdate the analyze task to in_progress.
 
-The analysis phase now uses simulation summaries automatically (when >12 personas
-and summary files exist). The sim.sh exercise command already produces both full
-simulation files and summary sidecars.
+Analysis runs automatically as part of `sim.sh exercise` (Phase 2 above). It uses
+simulation summaries when >12 personas and summary files exist. Spot-check
+verification also runs automatically when summaries are used.
 
-Run analysis (blocking, includes spot-check verification):
-```bash
-${CLAUDE_SKILL_DIR}/sim.sh exercise --study .facet/output/<study-name> --config <ABSOLUTE_EXERCISE_CONFIG_PATH>
-```
-
-Note: analysis runs as part of the exercise command. When it completes, check for
-verification.md and mention any caveats to the user.
+When Phase 2 completes, check for `verification.md` in the exercise output and
+mention any caveats to the user.
 
 TaskUpdate to completed.
 
