@@ -7,7 +7,7 @@ Produces valid YAML-frontmatter markdown configs that parse_config.py accepts.
 Usage:
     echo '{"product_name": "TaskFlow", ...}' | python3 generate_config.py [--output-dir /path]
 
-Prints the study config path to stdout on success. Exit 1 on validation failure.
+Prints the run config path to stdout on success. Exit 1 on validation failure.
 """
 
 import json
@@ -339,9 +339,10 @@ def main():
             print(f'  - {err}', file=sys.stderr)
         sys.exit(1)
 
-    # Print the study config path to stdout; the skill flow passes this path to
-    # `sim.sh init` and `sim.sh study` phase-by-phase.
-    print(study_filepath)
+    # Print the run config path to stdout. Phase-by-phase callers can feed this
+    # directly to `sim.sh init`, then read the generated study config path(s)
+    # from the run config's `studies` array before calling `sim.sh study`.
+    print(run_filepath)
 
 
 if __name__ == '__main__':

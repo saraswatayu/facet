@@ -205,7 +205,7 @@ class TestCLIEntrypoint(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, f'stderr: {result.stderr}')
         self.assertTrue(result.stdout.strip().endswith('.md'))
-        self.assertTrue(result.stdout.strip().endswith('clitest-pricing.md'))
+        self.assertTrue(result.stdout.strip().endswith('clitest-pricing-study.md'))
 
     def test_invalid_json_exits_nonzero(self):
         result = subprocess.run(
@@ -244,8 +244,8 @@ class TestCLIEntrypoint(unittest.TestCase):
 
         self.assertEqual(first.returncode, 0, f'stderr: {first.stderr}')
         self.assertEqual(second.returncode, 0, f'stderr: {second.stderr}')
-        self.assertTrue(first.stdout.strip().endswith('pricing-check.md'))
-        self.assertTrue(second.stdout.strip().endswith('pricing-check-2.md'))
+        self.assertTrue(first.stdout.strip().endswith('pricing-check-study.md'))
+        self.assertTrue(second.stdout.strip().endswith('pricing-check-2-study.md'))
         self.assertTrue(os.path.exists(os.path.join(self.output_dir, 'pricing-check-study.md')))
         self.assertTrue(os.path.exists(os.path.join(self.output_dir, 'pricing-check-2-study.md')))
 

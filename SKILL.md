@@ -178,8 +178,18 @@ This avoids shell quoting issues with apostrophes, dollar signs, and backticks i
 what's being tested (e.g., "homepage-layout-comparison", "pricing-tiers-freelancers").
 The script auto-increments if the name already exists (appends -2, -3, etc.).
 
-The script prints the study config path to stdout. Save it. If it fails, show the
-error and ask the user to clarify.
+The script prints the run config path to stdout. Save it as `RUN_CONFIG_PATH`.
+If it fails, show the error and ask the user to clarify.
+
+Before Phase 2, resolve the first generated study config path from the run
+config:
+
+```bash
+STUDY_CONFIG_PATH=$(python3 ${CLAUDE_SKILL_DIR}/parse_config.py "$RUN_CONFIG_PATH" studies --list | head -1)
+if [[ "$STUDY_CONFIG_PATH" != /* ]]; then
+  STUDY_CONFIG_PATH="$(dirname "$RUN_CONFIG_PATH")/$STUDY_CONFIG_PATH"
+fi
+```
 
 **Neutrality check:** Read the generated study config. If one option has 3x more
 words than another, tell the user before running.
@@ -226,7 +236,7 @@ TaskUpdate the panel task to in_progress.
 
 Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh init --config <ABSOLUTE_STUDY_CONFIG_PATH> --output-dir .facet/output &
+${CLAUDE_SKILL_DIR}/sim.sh init --config "$RUN_CONFIG_PATH" --output-dir .facet/output &
 INIT_PID=$!
 ```
 
@@ -249,7 +259,7 @@ TaskUpdate the study task to in_progress.
 
 Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh study --panel .facet/output/<panel-name> --config <ABSOLUTE_STUDY_CONFIG_PATH> &
+${CLAUDE_SKILL_DIR}/sim.sh study --panel .facet/output/<panel-name> --config "$STUDY_CONFIG_PATH" &
 STUDY_PID=$!
 ```
 
