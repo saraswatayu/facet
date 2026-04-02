@@ -336,6 +336,8 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
         fi
 
         local running=0
+        local pids=()
+        local wave_failures=0
 
         for i in $(seq "$wave_start" "$wave_end"); do
             local padded
@@ -398,17 +400,27 @@ Write the complete persona background to: ${output_path}" \
                 fi
             ) &
 
+            pids+=($!)
             ((running++)) || true
 
             # Throttle concurrency within wave
             if [ "$running" -ge "$concurrency" ]; then
-                wait -n 2>/dev/null || true
+                if ! wait -n 2>/dev/null; then
+                    ((wave_failures++)) || true
+                fi
                 ((running--)) || true
             fi
         done
 
-        # Wait for entire wave to complete before starting next
-        wait
+        # Wait for entire wave to complete and track failures
+        for pid in "${pids[@]}"; do
+            if ! wait "$pid" 2>/dev/null; then
+                ((wave_failures++)) || true
+            fi
+        done
+        if [ "$wave_failures" -gt 0 ]; then
+            echo "  WARNING: ${wave_failures} persona(s) failed in wave ${wave}"
+        fi
 
         # Build summaries from this wave for the next wave's diversity context
         for i in $(seq "$wave_start" "$wave_end"); do
@@ -431,8 +443,9 @@ $(extract_persona_summary "$pfile")"
     echo ""
     echo "Generation complete: ${completed}/${total} personas (${failed} failed)"
 
-    if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -gt 20 ]; then
-        echo "WARNING: >20% failure rate. Consider re-running."
+    if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -ge 20 ]; then
+        echo "ERROR: >=20% failure rate (${failed}/${total}). Re-run with: ./sim.sh init --config <config> --name $(basename "$panel_dir")"
+        return 1
     fi
 
     # Post-generate validation summary
@@ -493,6 +506,8 @@ run_simulate() {
     echo ""
 
     local running=0
+    local pids=()
+    local sim_failures=0
 
     for persona_file in "${panel_dir}/personas"/persona-*.md; do
         local base_name
@@ -538,16 +553,27 @@ Also write the structured summary (see the STRUCTURED SUMMARY section in the sim
             fi
         ) &
 
+        pids+=($!)
         ((running++)) || true
 
         # Throttle concurrency
         if [ "$running" -ge "$concurrency" ]; then
-            wait -n 2>/dev/null || true
+            if ! wait -n 2>/dev/null; then
+                ((sim_failures++)) || true
+            fi
             ((running--)) || true
         fi
     done
 
-    wait
+    # Wait for all remaining simulations and track failures
+    for pid in "${pids[@]}"; do
+        if ! wait "$pid" 2>/dev/null; then
+            ((sim_failures++)) || true
+        fi
+    done
+    if [ "$sim_failures" -gt 0 ]; then
+        echo "  WARNING: ${sim_failures} simulation(s) failed"
+    fi
 
     local completed
     completed=$(count_files "$simulations_dir" "persona-*.md")
@@ -561,8 +587,9 @@ Also write the structured summary (see the STRUCTURED SUMMARY section in the sim
     echo "Simulation complete: ${completed}/${total} personas (${failed} failed)"
     echo "Summaries written: ${summary_count}/${total}"
 
-    if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -gt 20 ]; then
-        echo "WARNING: >20% failure rate. Consider re-running simulations."
+    if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -ge 20 ]; then
+        echo "ERROR: >=20% simulation failure rate (${failed}/${total}). Re-run the study."
+        return 1
     fi
 
     update_status "$study_dir" "simulate" "complete" "$completed" "$total"
