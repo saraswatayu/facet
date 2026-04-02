@@ -174,12 +174,14 @@ class TestConfigGeneration(unittest.TestCase):
         data = self._base_data()
         data['calibration_context'] = 'Users pay $5-15 for similar tools.'
         ex_path, _ = generate_study_config_file(data, self.output_dir)
-        generate_run_config(data, [ex_path], self.output_dir)
+        run_path = generate_run_config(data, [ex_path], self.output_dir)
         cal_path = os.path.join(self.output_dir, 'calibration.md')
         generate_calibration_file(data['calibration_context'], self.output_dir)
         self.assertTrue(os.path.exists(cal_path))
         with open(cal_path) as f:
             self.assertIn('Users pay $5-15', f.read())
+        frontmatter, _ = parse_frontmatter(run_path)
+        self.assertEqual(frontmatter['calibration'], 'calibration.md')
 
 
 class TestCLIEntrypoint(unittest.TestCase):

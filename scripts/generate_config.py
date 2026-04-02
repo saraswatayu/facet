@@ -168,7 +168,7 @@ def generate_run_config(data, study_paths, output_dir):
         'personas_per_segment': personas_per_segment,
     }
     if calibration_context:
-        frontmatter['calibration'] = '.facet/calibration.md'
+        frontmatter['calibration'] = 'calibration.md'
     frontmatter['studies'] = [
         {'config': os.path.relpath(path, output_dir)}
         for path in study_paths
