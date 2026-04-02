@@ -35,7 +35,11 @@ def make_unique_slug(slug, output_dir=None):
         return slug
     base_slug = slug
     counter = 2
-    while os.path.exists(os.path.join(output_dir, slug)):
+    while (
+        os.path.exists(os.path.join(output_dir, slug)) or
+        os.path.exists(os.path.join(output_dir, f'{slug}.md')) or
+        os.path.exists(os.path.join(output_dir, f'{slug}-study.md'))
+    ):
         slug = f"{base_slug}-{counter}"
         counter += 1
     return slug
@@ -110,6 +114,12 @@ def generate_study_config_file(data, output_dir):
     return filepath, study_name_val
 
 
+def default_study_name(data):
+    """Default slug when the caller does not provide an explicit study_name."""
+    study_type = data.get('study_type') or match_study_type(data.get('research_question', ''))
+    return f"{data['product_name'].lower().replace(' ', '-')}-{study_type}"
+
+
 def auto_scale(data):
     """Pick segment/persona counts based on study complexity.
 
@@ -157,9 +167,9 @@ def generate_run_config(data, study_paths, output_dir):
     calibration_context = data.get('calibration_context', '')
     codebase_data = data.get('codebase_data', {})
 
-    # Study name: prefer LLM-generated name from input, fall back to product name
-    raw_name = data.get('study_name') or fallback_slug(product_name)
-    study_name = make_unique_slug(raw_name, output_dir=output_dir)
+    # Study name is resolved before file generation so the study and run config
+    # share the same collision-free slug.
+    study_name = data.get('study_name') or fallback_slug(product_name)
 
     # Build YAML frontmatter (use yaml.dump for safe serialization)
     frontmatter = {
@@ -288,6 +298,9 @@ def main():
     # Auto-detect study type if not provided
     if 'study_type' not in data and 'research_question' in data:
         data['study_type'] = match_study_type(data['research_question'])
+
+    raw_study_name = data.get('study_name') or default_study_name(data)
+    data['study_name'] = make_unique_slug(raw_study_name, output_dir=output_dir)
 
     # Generate calibration file if context provided
     if data.get('calibration_context'):

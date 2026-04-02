@@ -223,6 +223,32 @@ class TestCLIEntrypoint(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
+    def test_repeated_study_name_auto_increments(self):
+        data = {
+            'product_name': 'CLITest',
+            'study_name': 'pricing-check',
+            'research_question': 'Price this?',
+            'options': [{'name': 'A', 'description': '$10'}, {'name': 'B', 'description': '$20'}],
+        }
+
+        first = subprocess.run(
+            ['python3', 'scripts/generate_config.py', '--output-dir', self.output_dir],
+            input=json.dumps(data), capture_output=True, text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
+        second = subprocess.run(
+            ['python3', 'scripts/generate_config.py', '--output-dir', self.output_dir],
+            input=json.dumps(data), capture_output=True, text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
+
+        self.assertEqual(first.returncode, 0, f'stderr: {first.stderr}')
+        self.assertEqual(second.returncode, 0, f'stderr: {second.stderr}')
+        self.assertTrue(first.stdout.strip().endswith('pricing-check.md'))
+        self.assertTrue(second.stdout.strip().endswith('pricing-check-2.md'))
+        self.assertTrue(os.path.exists(os.path.join(self.output_dir, 'pricing-check-study.md')))
+        self.assertTrue(os.path.exists(os.path.join(self.output_dir, 'pricing-check-2-study.md')))
+
 
 if __name__ == '__main__':
     unittest.main()
