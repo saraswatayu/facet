@@ -640,7 +640,7 @@ main() {
     local cmd="${1:-help}"
     shift || true
 
-    local config="" study_dir="" study_name="" concurrency="5" calibration=""
+    local config="" study_dir="" study_name="" concurrency="5" calibration="" continue_on_error="false"
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -649,6 +649,7 @@ main() {
             --name) study_name="$2"; shift 2 ;;
             --concurrency) concurrency="$2"; shift 2 ;;
             --calibration) calibration="$2"; shift 2 ;;
+            --continue-on-error) continue_on_error="true"; shift ;;
             *) echo "Unknown argument: $1"; exit 1 ;;
         esac
     done
@@ -798,6 +799,172 @@ main() {
             echo "CROSS-SYNTHESIS COMPLETE"
             echo "Results: ${study_dir}/cross-synthesis.md"
             ;;
+        study)
+            [ -z "$config" ] && { echo "Usage: ./sim.sh study --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"; exit 1; }
+
+            # Parse study config
+            local segments per_segment study_calibration
+            segments=$(parse_frontmatter "$config" "segments")
+            per_segment=$(parse_frontmatter "$config" "personas_per_segment")
+            study_calibration=$(parse_frontmatter "$config" "calibration")
+
+            if [ -z "$segments" ] || [ -z "$per_segment" ]; then
+                echo "ERROR: Study config must have 'segments' and 'personas_per_segment' in frontmatter."
+                exit 1
+            fi
+
+            # Get exercise list
+            local exercises
+            exercises=$(python3 "${SCRIPT_DIR}/parse_config.py" "$config" "exercises" --list)
+            if [ -z "$exercises" ]; then
+                echo "ERROR: Study config must have 'exercises' array in frontmatter."
+                exit 1
+            fi
+
+            # Extract product body to temp file
+            local product_config
+            product_config=$(mktemp "${TMPDIR:-/tmp}/facet-product-XXXXXXXX.md")
+            trap "rm -f '$product_config'" EXIT
+
+            # Write frontmatter + body as product config
+            echo "---" > "$product_config"
+            echo "segments: ${segments}" >> "$product_config"
+            echo "personas_per_segment: ${per_segment}" >> "$product_config"
+            echo "---" >> "$product_config"
+            python3 "${SCRIPT_DIR}/parse_config.py" "$config" --body >> "$product_config"
+
+            # Resolve calibration path relative to study config
+            if [ -n "$study_calibration" ]; then
+                if [[ "$study_calibration" != /* ]]; then
+                    study_calibration="$(dirname "$config")/${study_calibration}"
+                fi
+                calibration="$study_calibration"
+            fi
+
+            # Resolve exercise config paths relative to study config
+            local config_dir
+            config_dir=$(dirname "$config")
+
+            local exercise_count=0
+            while IFS= read -r line; do
+                ((exercise_count++)) || true
+            done <<< "$exercises"
+
+            echo ""
+            echo "╔═══════════════════════════════════════════════╗"
+            echo "║  FACET STUDY                                   ║"
+            echo "║  Exercises: ${exercise_count}, Personas: $((segments * per_segment))                   ║"
+            echo "╚═══════════════════════════════════════════════╝"
+            echo ""
+
+            # Phase 1: Init (skip if personas already exist)
+            local persona_count=0
+            if [ -d "${study_dir}/personas" ]; then
+                persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+            fi
+
+            if [ "$persona_count" -gt 0 ]; then
+                echo "Skipping init: ${persona_count} personas already exist"
+                echo ""
+            else
+                # Run init by calling the functions directly
+                mkdir -p "${study_dir}/personas"
+                mkdir -p "${study_dir}/.templates"
+                cp "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/"
+                cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
+
+                run_plan "$product_config" "$study_dir" "$calibration"
+                run_generate "$product_config" "$study_dir" "$concurrency" "$calibration"
+            fi
+
+            # Phase 2: Run each exercise
+            local exercise_num=0
+            local exercise_failures=0
+            while IFS= read -r exercise_config_path; do
+                ((exercise_num++)) || true
+
+                # Resolve relative paths
+                if [[ "$exercise_config_path" != /* ]]; then
+                    exercise_config_path="${config_dir}/${exercise_config_path}"
+                fi
+
+                if [ ! -f "$exercise_config_path" ]; then
+                    echo "ERROR: Exercise config not found: $exercise_config_path"
+                    if [ "$continue_on_error" = "true" ]; then
+                        ((exercise_failures++)) || true
+                        continue
+                    else
+                        exit 1
+                    fi
+                fi
+
+                local ex_name
+                ex_name=$(parse_frontmatter "$exercise_config_path" "exercise_name")
+                [ -z "$ex_name" ] && ex_name=$(basename "$exercise_config_path" .md)
+
+                local ex_dir="${study_dir}/exercises/${ex_name}"
+
+                # Skip if already completed (resumability)
+                if [ -f "${ex_dir}/synthesis.md" ]; then
+                    echo "Skipping exercise ${exercise_num}/${exercise_count}: ${ex_name} (already completed)"
+                    continue
+                fi
+
+                echo ""
+                echo "Exercise ${exercise_num}/${exercise_count}: ${ex_name}"
+                echo "---"
+
+                # Set up exercise directory and version-lock templates
+                mkdir -p "${ex_dir}/simulations"
+                cp "$exercise_config_path" "${ex_dir}/exercise.md"
+
+                local ex_study_type
+                ex_study_type=$(parse_frontmatter "$exercise_config_path" "study_type")
+                mkdir -p "${ex_dir}/.templates"
+                cp "${SCRIPT_DIR}/templates/simulation.md" "${ex_dir}/.templates/"
+                cp "${SCRIPT_DIR}/templates/analysis.md" "${ex_dir}/.templates/"
+                if [ -n "$ex_study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${ex_study_type}.md" ]; then
+                    cp "${SCRIPT_DIR}/study-types/${ex_study_type}.md" "${ex_dir}/.templates/"
+                fi
+
+                if ! run_simulate "$study_dir" "$exercise_config_path" "$ex_dir" "$concurrency"; then
+                    echo "WARNING: Simulation failed for ${ex_name}"
+                    if [ "$continue_on_error" = "true" ]; then
+                        ((exercise_failures++)) || true
+                        continue
+                    else
+                        exit 1
+                    fi
+                fi
+
+                if ! run_analyze "$study_dir" "$exercise_config_path" "$ex_dir"; then
+                    echo "WARNING: Analysis failed for ${ex_name}"
+                    if [ "$continue_on_error" = "true" ]; then
+                        ((exercise_failures++)) || true
+                        continue
+                    else
+                        exit 1
+                    fi
+                fi
+            done <<< "$exercises"
+
+            # Phase 3: Cross-synthesis
+            echo ""
+            run_cross_synthesize "$study_dir"
+
+            echo ""
+            echo "╔═══════════════════════════════════════════════╗"
+            echo "║  STUDY COMPLETE                                ║"
+            echo "╚═══════════════════════════════════════════════╝"
+            echo ""
+            echo "Results: ${study_dir}/"
+            echo "  cross-synthesis.md — unified findings across all exercises"
+            if [ "$exercise_failures" -gt 0 ]; then
+                echo "  WARNING: ${exercise_failures} exercise(s) failed"
+            fi
+            echo ""
+            echo "Per-exercise results in exercises/*/"
+            ;;
         status)
             [ -z "$study_dir" ] && { echo "Usage: ./sim.sh status --study <dir>"; exit 1; }
             show_status "$study_dir"
@@ -809,12 +976,14 @@ main() {
             echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
             echo "  ./sim.sh exercise    --study <dir> --config <exercise-config> [--concurrency N]"
             echo "  ./sim.sh synthesize  --study <dir>"
+            echo "  ./sim.sh study       --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
             echo "  ./sim.sh status      --study <dir>"
             echo ""
             echo "Commands:"
             echo "  init        Plan + generate persona backgrounds (parallel)"
             echo "  exercise    Simulate personas through options (parallel) + analyze"
             echo "  synthesize  Cross-exercise synthesis (unified findings across all exercises)"
+            echo "  study       Full study lifecycle: init + all exercises + synthesize"
             echo "  status      Show study progress and exercise results"
             echo ""
             echo "Options:"
@@ -822,7 +991,8 @@ main() {
             echo "  --name        Study name (default: config filename without .md)"
             echo "  --study       Path to study output directory"
             echo "  --concurrency Number of parallel generations/simulations (default: 5)"
-            echo "  --calibration Path to calibration data file OR directory (real research data to ground personas)"
+            echo "  --calibration       Path to calibration data file OR directory (real research data to ground personas)"
+            echo "  --continue-on-error Skip failed exercises instead of halting (study command only)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/superhuman-product.md)"
