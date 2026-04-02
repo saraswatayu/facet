@@ -94,44 +94,68 @@ Ask: "Ready to run?" Wait for confirmation.
 ## Step 4: Run the Study (phase by phase, with progress)
 
 Do NOT run `sim.sh study` as one blocking call. Run each phase separately so you
-can report progress between them.
+can report progress between them. Within each phase, run the command in the
+background and poll the filesystem for progress.
 
 **Phase 1: Init (generate personas)**
 
-Tell the user: "Generating personas. This takes 3-5 minutes."
+Tell the user: "Generating [N] personas across [S] segments. I'll update you as they come in."
 
+Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh init --config <ABSOLUTE_STUDY_CONFIG_PATH> --output-dir .facet/output
+${CLAUDE_SKILL_DIR}/sim.sh init --config <ABSOLUTE_STUDY_CONFIG_PATH> --output-dir .facet/output &
+INIT_PID=$!
 ```
 
-When it finishes, count the persona files:
+Poll every 30 seconds until the process completes:
 ```bash
-ls .facet/output/<study-name>/personas/*.md | wc -l
+while kill -0 $INIT_PID 2>/dev/null; do
+  sleep 30
+  DONE=$(ls .facet/output/<study-name>/personas/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
+  echo "Personas: $DONE/<TOTAL> generated"
+done
+wait $INIT_PID
 ```
 
-Tell the user: "[N] personas generated across [S] segments."
+After each poll, tell the user: "Personas: [done]/[total] generated..."
+When complete: "[N] personas generated. Running simulations."
 
 **Phase 2: Exercise (simulate each persona)**
 
 For each exercise config referenced in the study config:
 
-Tell the user: "Running simulations. [N] personas evaluating your options. ~5 minutes."
+Tell the user: "Simulating [N] personas. Updating as they finish."
 
+Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh exercise --study .facet/output/<study-name> --config <ABSOLUTE_EXERCISE_CONFIG_PATH>
+${CLAUDE_SKILL_DIR}/sim.sh exercise --study .facet/output/<study-name> --config <ABSOLUTE_EXERCISE_CONFIG_PATH> &
+EX_PID=$!
 ```
 
-When it finishes, tell the user: "Simulations complete. Analyzing findings."
+Poll every 30 seconds:
+```bash
+while kill -0 $EX_PID 2>/dev/null; do
+  sleep 30
+  DONE=$(ls .facet/output/<study-name>/exercises/<exercise>/simulations/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
+  echo "Simulations: $DONE/<TOTAL>"
+done
+wait $EX_PID
+```
+
+Tell the user progress after each poll: "Simulations: [done]/[total]..."
+When complete: "Simulations done. Analyzing findings."
 
 **Phase 3: Synthesize (if multiple exercises)**
 
 If the study has 2+ exercises:
 
+Tell the user: "Synthesizing findings across exercises. ~2 minutes."
+
 ```bash
 ${CLAUDE_SKILL_DIR}/sim.sh synthesize --study .facet/output/<study-name>
 ```
 
-Tell the user: "Cross-exercise synthesis complete."
+This is fast enough to run blocking. When done: "Synthesis complete."
 
 ## Step 5: Persona Gallery
 
