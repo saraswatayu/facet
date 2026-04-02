@@ -883,15 +883,84 @@ main() {
             estimate_time "$ex_persona_count" 1 "$concurrency"
             echo ""
 
-            run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
-            run_analyze "$study_dir" "$config" "$exercise_dir"
+            if [ "$runs" -gt 1 ]; then
+                # Stability testing: run simulate N times, then compare
+                echo "Stability testing: ${runs} runs"
+                echo ""
 
-            echo ""
-            echo "EXERCISE COMPLETE"
-            echo "Results: ${exercise_dir}/"
-            echo "  synthesis.md — analysis + recommendation + counterargument"
-            echo "  artifacts.md — actionable deliverables"
-            echo "  simulations/ — per-persona simulation details"
+                for run_num in $(seq 1 "$runs"); do
+                    local run_sim_dir="${exercise_dir}/simulations"
+                    if [ "$run_num" -gt 1 ]; then
+                        run_sim_dir="${exercise_dir}/simulations-run-${run_num}"
+                        mkdir -p "$run_sim_dir"
+                    fi
+
+                    echo "Run ${run_num}/${runs}:"
+
+                    # For runs > 1, temporarily swap simulations dir
+                    if [ "$run_num" -gt 1 ]; then
+                        local orig_sim_dir="${exercise_dir}/simulations"
+                        mv "$orig_sim_dir" "${exercise_dir}/simulations-run-1" 2>/dev/null || true
+                        mkdir -p "$orig_sim_dir"
+                    fi
+
+                    run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
+
+                    if [ "$run_num" -gt 1 ]; then
+                        # Move this run's results to its own directory
+                        mv "${exercise_dir}/simulations" "$run_sim_dir"
+                        # Restore run-1 as the main simulations dir
+                        mv "${exercise_dir}/simulations-run-1" "${exercise_dir}/simulations"
+                    fi
+                done
+
+                # Run analysis on the first run's simulations
+                run_analyze "$study_dir" "$config" "$exercise_dir"
+
+                # Generate stability report
+                echo ""
+                echo "Generating stability report..."
+
+                local sim_dirs_list=""
+                sim_dirs_list="- ${exercise_dir}/simulations/"
+                for run_num in $(seq 2 "$runs"); do
+                    sim_dirs_list="${sim_dirs_list}
+- ${exercise_dir}/simulations-run-${run_num}/"
+                done
+
+                FACET_PHASE="Stability report: ${runs} runs" \
+                claude --print --verbose --output-format stream-json \
+                    --max-turns 30 \
+                    --allowedTools "Read,Write,Glob,Grep" \
+                    -p "You are generating a stability report for a Facet simulation exercise.
+
+Read these files for context:
+1. Stability template: ${SCRIPT_DIR}/templates/stability.md
+2. Exercise config: ${config}
+
+The exercise was run ${runs} times with the same personas. Read simulation files from each run:
+${sim_dirs_list}
+
+Compare per-persona verdicts across runs.
+Write the stability report to: ${exercise_dir}/stability-report.md" \
+                    2>&1 | $STREAM_FILTER
+
+                echo ""
+                echo "EXERCISE COMPLETE (stability testing: ${runs} runs)"
+                echo "Results: ${exercise_dir}/"
+                echo "  synthesis.md — analysis from run 1"
+                echo "  stability-report.md — per-persona consistency across ${runs} runs"
+            else
+                run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
+                run_analyze "$study_dir" "$config" "$exercise_dir"
+
+                echo ""
+                echo "EXERCISE COMPLETE"
+                echo "Results: ${exercise_dir}/"
+                echo "  synthesis.md — analysis + recommendation + counterargument"
+                echo "  artifacts.md — actionable deliverables"
+                echo "  simulations/ — per-persona simulation details"
+            fi
             ;;
         synthesize)
             [ -z "$study_dir" ] && { echo "Usage: ./sim.sh synthesize --study <dir>"; exit 1; }
@@ -1161,7 +1230,7 @@ Write the comparison to: ${compare_output}" \
             echo ""
             echo "Usage:"
             echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
-            echo "  ./sim.sh exercise    --study <dir> --config <exercise-config> [--concurrency N]"
+            echo "  ./sim.sh exercise    --study <dir> --config <exercise-config> [--concurrency N] [--runs N]"
             echo "  ./sim.sh synthesize  --study <dir>"
             echo "  ./sim.sh compare     --study <dir1> --study2 <dir2>"
             echo "  ./sim.sh study       --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
@@ -1182,6 +1251,7 @@ Write the comparison to: ${compare_output}" \
             echo "  --concurrency Number of parallel generations/simulations (default: 5)"
             echo "  --calibration       Path to calibration data file OR directory (real research data to ground personas)"
             echo "  --continue-on-error Skip failed exercises instead of halting (study command only)"
+            echo "  --runs           Number of simulation runs for stability testing (exercise command, default: 1)"
             echo ""
             echo "Workflow:"
             echo "  1. Create a product config (see examples/superhuman-product.md)"
