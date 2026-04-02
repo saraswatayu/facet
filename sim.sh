@@ -743,16 +743,18 @@ main() {
     local cmd="${1:-help}"
     shift || true
 
-    local config="" study_dir="" study_name="" concurrency="5" calibration="" continue_on_error="false"
+    local config="" study_dir="" study_dir2="" study_name="" concurrency="5" calibration="" continue_on_error="false" runs="1"
 
     while [ $# -gt 0 ]; do
         case "$1" in
             --config) config="$2"; shift 2 ;;
             --study) study_dir="$2"; shift 2 ;;
+            --study2) study_dir2="$2"; shift 2 ;;
             --name) study_name="$2"; shift 2 ;;
             --concurrency) concurrency="$2"; shift 2 ;;
             --calibration) calibration="$2"; shift 2 ;;
             --continue-on-error) continue_on_error="true"; shift ;;
+            --runs) runs="$2"; shift 2 ;;
             *) echo "Unknown argument: $1"; exit 1 ;;
         esac
     done
@@ -909,6 +911,79 @@ main() {
             echo ""
             echo "CROSS-SYNTHESIS COMPLETE"
             echo "Results: ${study_dir}/cross-synthesis.md"
+            ;;
+        compare)
+            [ -z "$study_dir" ] && { echo "Usage: ./sim.sh compare --study <dir1> --study2 <dir2>"; exit 1; }
+            [ -z "$study_dir2" ] && { echo "Usage: ./sim.sh compare --study <dir1> --study2 <dir2>"; exit 1; }
+
+            # Resolve study_dir2 to absolute path
+            if [[ "$study_dir2" != /* ]]; then
+                study_dir2="${SCRIPT_DIR}/${study_dir2}"
+            fi
+
+            # Collect synthesis files from both studies
+            local study_a_files="" study_b_files=""
+
+            if [ -f "${study_dir}/cross-synthesis.md" ]; then
+                study_a_files="${study_dir}/cross-synthesis.md"
+            else
+                for f in "${study_dir}/exercises"/*/synthesis.md; do
+                    [ -f "$f" ] && study_a_files="${study_a_files}
+- $f"
+                done
+            fi
+
+            if [ -f "${study_dir2}/cross-synthesis.md" ]; then
+                study_b_files="${study_dir2}/cross-synthesis.md"
+            else
+                for f in "${study_dir2}/exercises"/*/synthesis.md; do
+                    [ -f "$f" ] && study_b_files="${study_b_files}
+- $f"
+                done
+            fi
+
+            if [ -z "$study_a_files" ] || [ -z "$study_b_files" ]; then
+                echo "ERROR: Both studies need synthesis files (run exercises or synthesize first)."
+                exit 1
+            fi
+
+            echo ""
+            echo "╔═══════════════════════════════════════════════╗"
+            echo "║  STUDY COMPARISON                              ║"
+            echo "║  A: $(basename "$study_dir")"
+            echo "║  B: $(basename "$study_dir2")"
+            echo "╚═══════════════════════════════════════════════╝"
+            echo ""
+
+            local compare_output="${study_dir}/comparison-vs-$(basename "$study_dir2").md"
+
+            FACET_PHASE="Comparison: $(basename "$study_dir") vs $(basename "$study_dir2")" \
+            claude --print --verbose --output-format stream-json \
+                --max-turns 30 \
+                --allowedTools "Read,Write,Glob,Grep" \
+                -p "You are comparing two Facet simulation studies.
+
+Read these files for context:
+1. Comparison template (follow these instructions): ${SCRIPT_DIR}/templates/comparison.md
+
+Study A ($(basename "$study_dir")):
+${study_a_files}
+
+Study B ($(basename "$study_dir2")):
+${study_b_files}
+
+Read all listed synthesis files from both studies, then produce a comparison.
+Write the comparison to: ${compare_output}" \
+                2>&1 | $STREAM_FILTER
+
+            if [ ! -s "$compare_output" ]; then
+                echo "ERROR: Comparison was not generated."
+                exit 1
+            fi
+
+            echo ""
+            echo "COMPARISON COMPLETE"
+            echo "Results: ${compare_output}"
             ;;
         study)
             [ -z "$config" ] && { echo "Usage: ./sim.sh study --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"; exit 1; }
@@ -1088,6 +1163,7 @@ main() {
             echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
             echo "  ./sim.sh exercise    --study <dir> --config <exercise-config> [--concurrency N]"
             echo "  ./sim.sh synthesize  --study <dir>"
+            echo "  ./sim.sh compare     --study <dir1> --study2 <dir2>"
             echo "  ./sim.sh study       --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
             echo "  ./sim.sh status      --study <dir>"
             echo ""
@@ -1095,6 +1171,7 @@ main() {
             echo "  init        Plan + generate persona backgrounds (parallel)"
             echo "  exercise    Simulate personas through options (parallel) + analyze"
             echo "  synthesize  Cross-exercise synthesis (unified findings across all exercises)"
+            echo "  compare     Compare findings between two study runs"
             echo "  study       Full study lifecycle: init + all exercises + synthesize"
             echo "  status      Show study progress and exercise results"
             echo ""
