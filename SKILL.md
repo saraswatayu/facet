@@ -17,7 +17,7 @@ The user's question: $ARGUMENTS
 
 ## Project Context (auto-loaded)
 
-Previous studies: !`ls .facet/output/ 2>/dev/null || echo "none yet"`
+Previous studies: !`ls .facet/studies/ 2>/dev/null || echo "none yet"`
 Recent project changes: !`git log --oneline -5 2>/dev/null || echo "no git history"`
 Known issues: !`grep -r "TODO\|FIXME\|HACK" --include="*.py" --include="*.sh" -l ${CLAUDE_SKILL_DIR} 2>/dev/null | head -10 || echo "none"`
 Past learnings: !`cat .facet/learnings.jsonl 2>/dev/null | tail -5 || echo "no learnings yet"`
@@ -30,7 +30,14 @@ research question.
 ## Setup (run once per project)
 
 ```bash
-mkdir -p .facet/output
+mkdir -p .facet/configs
+```
+
+Check for old layout and inform:
+```bash
+if [ -d .facet/output ] && [ ! -d .facet/personas ]; then
+  echo "NOTE: Found old .facet/output/ layout. New studies will use .facet/ directly."
+fi
 ```
 
 If `.facet/` is not in the project's .gitignore, add it.
@@ -149,7 +156,7 @@ Then read `${CLAUDE_SKILL_DIR}/references/config-examples.md` for the YAML forma
 
 Then:
 
-1. Use the **Write** tool to create `.facet/output/.config-input.json` with the JSON object:
+1. Use the **Write** tool to create `.facet/configs/.config-input.json` with the JSON object:
 
 ```json
 {
@@ -169,7 +176,7 @@ Then:
 2. Then run:
 
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir .facet/output < .facet/output/.config-input.json
+python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir .facet/configs < .facet/configs/.config-input.json
 ```
 
 This avoids shell quoting issues with apostrophes, dollar signs, and backticks in user input.
@@ -212,7 +219,7 @@ filesystem for progress.
 **Check for existing panel first:**
 
 ```bash
-PANEL_DIR=$(ls -d .facet/output/*/personas 2>/dev/null | head -1 | sed 's|/personas$||')
+if [ -d .facet/personas ]; then PANEL_DIR=".facet"; else PANEL_DIR=""; fi
 ```
 
 If `PANEL_DIR` is not empty, an existing panel was found:
@@ -236,7 +243,7 @@ TaskUpdate the panel task to in_progress.
 
 Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh init --config "$RUN_CONFIG_PATH" --output-dir .facet/output &
+${CLAUDE_SKILL_DIR}/sim.sh init --config "$RUN_CONFIG_PATH" --panel .facet/ &
 INIT_PID=$!
 ```
 
@@ -244,7 +251,7 @@ Poll every 30 seconds until the process completes:
 ```bash
 while kill -0 $INIT_PID 2>/dev/null; do
   sleep 30
-  DONE=$(ls .facet/output/<panel-name>/personas/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
+  DONE=$(ls .facet/personas/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
   echo "Personas: $DONE/<TOTAL> generated"
 done
 wait $INIT_PID
@@ -259,7 +266,7 @@ TaskUpdate the study task to in_progress.
 
 Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh study --panel .facet/output/<panel-name> --config "$STUDY_CONFIG_PATH" &
+${CLAUDE_SKILL_DIR}/sim.sh study --panel .facet/ --config "$STUDY_CONFIG_PATH" &
 STUDY_PID=$!
 ```
 
@@ -267,7 +274,7 @@ Poll every 30 seconds:
 ```bash
 while kill -0 $STUDY_PID 2>/dev/null; do
   sleep 30
-  DONE=$(ls .facet/output/<panel-name>/studies/<study-name>/simulations/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
+  DONE=$(ls .facet/studies/<study-name>/simulations/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
   echo "Simulations: $DONE/<TOTAL>"
 done
 wait $STUDY_PID
@@ -297,14 +304,14 @@ TaskUpdate the synthesis task to in_progress.
 Tell the user: "Synthesizing findings across studies. ~2 minutes."
 
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh synthesize --panel .facet/output/<panel-name>
+${CLAUDE_SKILL_DIR}/sim.sh synthesize --panel .facet/
 ```
 
 This is fast enough to run blocking. When done: "Synthesis complete."
 
 ## Step 5: Persona Gallery
 
-Read persona files from `.facet/output/<study-name>/personas/`. For large studies
+Read persona files from `.facet/personas/`. For large studies
 (30+ personas), use an Explore subagent to read them all and select standouts.
 
 Pick 5:
@@ -350,7 +357,7 @@ people aren't. Sharpen your questions for real interviews with this."
 Use AskUserQuestion (follow the format above):
 - "Explore a persona's reasoning" — read their persona + simulation files
 - "Run another study" — new interview, reuse existing personas
-- "Export stakeholder summary" — write one-page to .facet/output/
+- "Export stakeholder summary" — write one-page to .facet/
 
 ## Step 8: Log Learnings
 
