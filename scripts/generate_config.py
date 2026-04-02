@@ -25,12 +25,20 @@ from parse_config import parse_frontmatter
 
 # --- Study naming ---
 
+def sanitize_slug(slug):
+    """Strip path separators and traversal sequences from a slug."""
+    slug = os.path.basename(slug)
+    slug = slug.replace('..', '')
+    return re.sub(r'[^\w\-]', '-', slug).strip('-') or 'unnamed'
+
+
 def make_unique_slug(slug, output_dir=None):
     """Auto-increment a slug to avoid directory collisions.
 
     "homepage-layout" → "homepage-layout" (first time)
     "homepage-layout" → "homepage-layout-2" (second time)
     """
+    slug = sanitize_slug(slug)
     if not output_dir:
         return slug
     base_slug = slug
