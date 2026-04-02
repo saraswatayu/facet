@@ -498,9 +498,10 @@ run_simulate() {
         base_name=$(basename "$persona_file" .md)
         local padded="${base_name#persona-}"
         local output_path="${simulations_dir}/${base_name}.md"
+        local summary_path="${simulations_dir}/${base_name}-summary.md"
 
-        # Skip if already generated
-        if [ -s "$output_path" ]; then
+        # Skip if already generated (check both simulation and summary)
+        if [ -s "$output_path" ] && [ -s "$summary_path" ]; then
             echo "  skip: ${base_name}.md (already exists)"
             continue
         fi
@@ -525,7 +526,8 @@ Read these files for context:
 Generate this persona's reactions to the options defined in the exercise config.
 Stay completely in character — use the persona's voice, vocabulary, and decision-making patterns from their background.
 
-Write the simulation to: ${output_path}" \
+Write the full simulation to: ${output_path}
+Also write the structured summary (see the STRUCTURED SUMMARY section in the simulation template) to: ${summary_path}" \
                 2>&1 | tee "$log_file" | $STREAM_FILTER
 
             if [ -s "$output_path" ]; then
@@ -548,10 +550,15 @@ Write the simulation to: ${output_path}" \
 
     local completed
     completed=$(count_files "$simulations_dir" "persona-*.md")
+    # Exclude summary files from simulation count
+    local summary_count
+    summary_count=$(find "$simulations_dir" -name "persona-*-summary.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+    completed=$((completed - summary_count))
     local failed=$((total - completed))
 
     echo ""
     echo "Simulation complete: ${completed}/${total} personas (${failed} failed)"
+    echo "Summaries written: ${summary_count}/${total}"
 
     if [ "$failed" -gt 0 ] && [ "$((failed * 100 / total))" -gt 20 ]; then
         echo "WARNING: >20% failure rate. Consider re-running simulations."
@@ -567,6 +574,28 @@ run_analyze() {
     local exercise_dir="$3"
 
     update_status "$exercise_dir" "analyze" "started"
+
+    # Determine whether to use simulation summaries (context engineering)
+    # Use summaries when >12 personas AND summary files exist
+    local persona_count
+    persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+    local summary_count
+    summary_count=$(find "${exercise_dir}/simulations" -name "persona-*-summary.md" -size +0c 2>/dev/null | wc -l | tr -d ' ')
+
+    local simulation_instruction
+    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ]; then
+        simulation_instruction="Then read ALL simulation SUMMARY files in: ${exercise_dir}/simulations/ (files matching persona-*-summary.md)
+These are structured extractions containing verdicts, key quotes, quantitative data, and behavioral economics analysis.
+If you need full simulation detail for a specific persona (e.g., for the Key Personas section or counterargument), read their full simulation file (persona-NNN.md without the -summary suffix)."
+        echo "  Using simulation summaries (${summary_count} available, ${persona_count} personas)"
+    else
+        simulation_instruction="Then read ALL simulation files in: ${exercise_dir}/simulations/"
+        if [ "$persona_count" -le 12 ]; then
+            echo "  Reading full simulations (${persona_count} personas, under threshold)"
+        else
+            echo "  Reading full simulations (no summaries available)"
+        fi
+    fi
 
     echo ""
     echo "╔═══════════════════════════════════════════════╗"
@@ -585,7 +614,7 @@ Read these files for context:
 2. Analysis template (follow these instructions): ${exercise_dir}/.templates/analysis.md
 
 Then read ALL persona background files in: ${study_dir}/personas/
-Then read ALL simulation files in: ${exercise_dir}/simulations/
+${simulation_instruction}
 
 Follow the analysis template to produce a comprehensive analysis.
 Write the synthesis to: ${exercise_dir}/synthesis.md
@@ -602,6 +631,90 @@ Write the artifacts to: ${exercise_dir}/artifacts.md" \
     fi
 
     update_status "$exercise_dir" "analyze" "complete"
+
+    # Run spot-check verification if synthesis was generated and summaries were used
+    if [ "$persona_count" -gt 12 ] && [ "$summary_count" -gt 0 ] && [ -s "${exercise_dir}/synthesis.md" ]; then
+        run_spot_check "$study_dir" "$exercise_dir" "$persona_count"
+    fi
+}
+
+# --- Phase: Spot-Check Verification ---
+run_spot_check() {
+    local study_dir="$1"
+    local exercise_dir="$2"
+    local persona_count="$3"
+    local check_count=5
+    [ "$persona_count" -lt 10 ] && check_count=3
+
+    echo ""
+    echo "  Running spot-check verification (${check_count} personas)..."
+
+    # Pick random persona IDs using study directory name as seed for determinism
+    local seed
+    seed=$(echo "$(basename "$study_dir")$(basename "$exercise_dir")" | cksum | cut -d' ' -f1)
+    local selected
+    selected=$(python3 -c "
+import random
+random.seed(${seed})
+ids = random.sample(range(1, ${persona_count} + 1), min(${check_count}, ${persona_count}))
+for i in ids:
+    print(f'{i:03d}')
+")
+
+    # Build file lists for the spot-check prompt
+    local check_files=""
+    for padded in $selected; do
+        local persona_file="${study_dir}/personas/persona-${padded}.md"
+        local sim_file="${exercise_dir}/simulations/persona-${padded}.md"
+        local summary_file="${exercise_dir}/simulations/persona-${padded}-summary.md"
+        if [ -f "$persona_file" ] && [ -f "$sim_file" ]; then
+            check_files="${check_files}
+- Persona background: ${persona_file}
+- Full simulation: ${sim_file}"
+            [ -f "$summary_file" ] && check_files="${check_files}
+- Simulation summary: ${summary_file}"
+        fi
+    done
+
+    if [ -z "$check_files" ]; then
+        echo "  WARN: No persona files found for spot-check. Skipping."
+        return 0
+    fi
+
+    FACET_PHASE="Spot-check verification" \
+    claude --print --verbose --output-format stream-json \
+        --max-turns 15 \
+        --allowedTools "Read,Write,Grep" \
+        -p "You are verifying the accuracy of a synthesis document by spot-checking specific personas.
+
+Read the synthesis: ${exercise_dir}/synthesis.md
+
+Then for each persona below, read their full files and verify:
+1. Do synthesis claims about this persona match the source data?
+2. Are quoted statements accurate?
+3. Are quantitative figures (NPS, revenue, retention) correct?
+4. Is the persona's verdict correctly attributed?
+${check_files}
+
+Write a verification report to: ${exercise_dir}/verification.md
+
+Format:
+# Spot-Check Verification
+
+Checked personas: [list IDs]
+
+## Per-Persona Results
+For each persona: PASS or DISCREPANCY with specific details.
+
+## Overall
+[X/Y personas verified. Summary of any discrepancies found.]" \
+        2>&1 | $STREAM_FILTER
+
+    if [ -s "${exercise_dir}/verification.md" ]; then
+        echo "  Verification written to ${exercise_dir}/verification.md"
+    else
+        echo "  WARN: Verification was not generated."
+    fi
 }
 
 # --- Phase: Cross-Synthesis (single call — unified analysis across exercises) ---
