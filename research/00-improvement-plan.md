@@ -22,7 +22,7 @@ Every synthesis includes confidence grades, disclosure of synthetic methodology,
 
 ### ✅ 1.3 Template Version Locking
 
-Templates copied into `.templates/` directories at init and exercise time. Existing studies are reproducible even if source templates change.
+Templates copied into `.templates/` directories at init and study time. Existing studies are reproducible even if source templates change.
 
 **Research:** Prompt sensitivity research shows even minor rewording can shift results by up to 76 accuracy points (arXiv:2310.11324).
 
@@ -40,11 +40,11 @@ Templates copied into `.templates/` directories at init and exercise time. Exist
 
 **Why:** Bisbee et al. found replicating silicon sampling results months later using identical prompts was "impossible." Up to 10% variation observed even under deterministic settings (Schmalbach, 2024). Chain-of-Thought actually *amplifies* instability in value-laden contexts.
 
-**How:** `sim.sh exercise` gets a `--reliability` flag that runs the study twice and compares synthesis recommendations.
+**How:** `sim.sh study` gets a `--runs N` flag that runs the simulation N times and compares synthesis recommendations. (Implemented as `--runs`.)
 
 ### 🔲 1.6 Config Neutrality Check
 
-**What:** Before running, check that options in the exercise config are described with equal detail and neutral framing. Warn if one option has 3x more description than another.
+**What:** Before running, check that options in the study config are described with equal detail and neutral framing. Warn if one option has 3x more description than another.
 
 **Why:** Confirmation bias research (arXiv:2504.09343) shows AI models mirror the language and assumptions in prompts. If the config describes Option A more favorably, all downstream outputs reflect that bias.
 
@@ -242,7 +242,7 @@ Waves of 5. `extract_persona_summary()` builds summaries. Inter-wave diversity i
 
 ### ✅ 7.2 Template Version Locking
 
-Templates copied to `.templates/` at init and exercise time.
+Templates copied to `.templates/` at init and study time.
 
 ### ✅ 7.3 Calibration Data Support
 

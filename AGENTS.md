@@ -18,7 +18,7 @@ sim.sh status:     Panel progress, study completion, cross-synthesis readiness
 Primary interface:
 - **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `claude --print` subprocess.
 
-Key design: personas are generated ONCE as a project-level "panel" and reused across multiple studies. The `run` subcommand reads a single study config containing all studies and runs the full pipeline. The `study` subcommand runs a single study against an existing panel.
+Key design: personas are generated ONCE and reused across multiple studies. The `study` subcommand reads a single study config containing all studies and runs the full pipeline.
 
 ### Model Routing
 
@@ -94,13 +94,13 @@ Supported file types: `.md`, `.csv`, `.txt`, `.json`, `.yaml`, `.yml`.
 ## Key Files
 
 ```
-sim.sh                  — orchestrator (init, study, status subcommands)
+sim.sh                  — orchestrator (init, study, synthesize, run, compare, status subcommands)
 stream_filter.py        — real-time progress display, parses stream-json, uses FACET_PHASE env var
 templates/
   plan.md               — planning: segments, constraint vectors, diversity matrix, name registry
   persona.md            — persona background generation (identity, psychology, domain, discovery)
-  simulation.md         — per-persona study simulation (Chain-of-Feeling, BDI verdicts) + structured summary sidecar
-  analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files). Reads summaries when >12 personas.
+  simulation.md         — per-persona study simulation (Chain-of-Feeling, BDI verdicts)
+  analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files)
   cross-synthesis.md    — cross-study synthesis → unified findings across all studies
   comparison.md         — study comparison → stable vs fragile findings
   stability.md          — simulation stability report → per-persona consistency
@@ -133,7 +133,7 @@ study-templates/        — 5 pre-built study configs (concept, pricing, activat
 
 **Full run config** (for `run`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `studies` array. Each study entry has a `config` path (relative to the config file). Body is the product description (doubles as product config for init).
 
-See `examples/` for study/product configs, `study-templates/` for full run configs.
+See `examples/` for study/product configs, `study-templates/` for study configs.
 
 ## Output Structure
 
@@ -149,14 +149,12 @@ output/{product}/
 └── studies/
     └── {study-name}/
         ├── .templates/             # version-locked study templates
-        ├── study-config.md         # copy of study config
+        ├── study-config.md             # copy of study config
         ├── simulations/
-        │   ├── persona-001.md          # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
-        │   ├── persona-001-summary.md  # structured sidecar (verdict, quotes, numbers)
+        │   ├── persona-001.md      # Chain-of-Feeling arcs, BDI verdicts, 12-month tables
         │   └── ...
         ├── synthesis.md            # analysis + recommendation + counterargument
-        ├── artifacts.md            # actionable deliverables + validation plan
-        └── verification.md         # spot-check results (separate, never appended to synthesis)
+        └── artifacts.md            # actionable deliverables + validation plan
 ```
 
 ## Conventions
@@ -168,7 +166,6 @@ These are invariants — do not break them:
 - Persona files are zero-padded: `persona-001.md`, `persona-023.md`
 - Analysis produces TWO files: `synthesis.md` and `artifacts.md` (not one combined file)
 - Names must be unique across the entire study (enforced by name registry in plan.md)
-- Simulation summaries (persona-NNN-summary.md) are written alongside full simulations during the simulate phase. Analysis reads summaries when >12 personas to reduce context from ~490K to ~240-288K tokens. verification.md is always a separate file.
 - All numbers in personas/simulations must be specific and internally consistent
 - Template sections adapt to product domain (not hardcoded to travel/flights)
 - Templates are version-locked into `.templates/` at init and study time
@@ -179,7 +176,7 @@ These are invariants — do not break them:
 1. Create `study-types/{name}.md` following the pattern in existing study types
 2. Include: caveat section, what it tests, simulation framework, per-persona metrics, outcome requirements
 3. Create an example study config in `examples/` with matching `study_type` in frontmatter
-4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh study --panel output/test/ --config examples/your-study.md`
+4. Test: `./sim.sh init --config examples/superhuman-product.md --name test` then `./sim.sh study --panel output/test/ --config examples/your-study-config.md`
 5. Review the synthesis — does it produce actionable recommendations?
 
 No code changes needed in sim.sh — it reads `study_type` from frontmatter and loads `study-types/{type}.md` automatically.

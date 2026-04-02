@@ -31,6 +31,14 @@ else
     ((errors++))
 fi
 
+# Check PyYAML
+if python3 -c "import yaml" &>/dev/null; then
+    echo "  $PASS PyYAML"
+else
+    echo "  $FAIL PyYAML — install: pip3 install pyyaml"
+    ((errors++))
+fi
+
 # Check bash
 if command -v bash &>/dev/null; then
     version=$(bash --version 2>/dev/null | head -1 | sed 's/GNU bash, version //' | cut -d'(' -f1 || echo "unknown")
@@ -93,6 +101,6 @@ echo "  Ready to go."
 echo ""
 echo "  Quickstart:"
 echo "    ./sim.sh init --config examples/superhuman-product.md --name my-study"
-echo "    ./sim.sh exercise --study output/my-study/ --config examples/superhuman-pricing.md"
-echo "    ./sim.sh status --study output/my-study/"
+echo "    ./sim.sh study --panel output/my-study/ --config examples/superhuman-pricing.md"
+echo "    ./sim.sh status --panel output/my-study/"
 echo ""

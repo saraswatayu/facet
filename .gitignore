@@ -1,5 +1,9 @@
 output/
+studies/
 .env
 *.log
 .DS_Store
 TODOS.md
+__pycache__/
+*.pyc
+tmp_*/

@@ -13,7 +13,7 @@ Facet is a CLI tool that orchestrates Claude CLI invocations. It does not run a 
 - Claude invocations are restricted to Read, Write, Glob, Grep tools — no Bash (no arbitrary code execution)
 - Config files and calibration data are passed to Claude as prompt content
 - Output is written to the local filesystem only
-- Templates are version-locked at init/exercise time for reproducibility
+- Templates are version-locked at init/study time for reproducibility
 
 ## What to Watch For
 

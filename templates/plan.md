@@ -1,6 +1,6 @@
 # Study Planning Instructions
 
-You are designing persona backgrounds for a behavioral simulation study. Your job is to create a detailed plan that ensures the study produces diverse, realistic, and insightful personas that can be reused across multiple exercises.
+You are designing persona backgrounds for a behavioral simulation study. Your job is to create a detailed plan that ensures the study produces diverse, realistic, and insightful personas that can be reused across multiple studies.
 
 The product config has been provided as a separate file — you should have already read it before reading this template.
 
@@ -76,7 +76,7 @@ Diversity enforcement:
 - No two personas should have the same job title
 - Use census-realistic name frequencies — not all names should be distinctive or unusual
 
-Attribute diversity targets (exercise-agnostic):
+Attribute diversity targets (study-agnostic):
 - 25-35% of personas should have deal-breakers or strong status quo bias making them hard to convert
 - ~15% should have attributes that make them genuinely indifferent to this product category
 - No more than 60% should cluster in innovator/early adopter adoption stages

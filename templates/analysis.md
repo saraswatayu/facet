@@ -1,16 +1,16 @@
 # Unified Analysis Instructions
 
-You are producing the complete analysis for a behavioral simulation exercise. This combines synthesis, actionable artifacts, and adversarial review — written to TWO separate output files.
+You are producing the complete analysis for a behavioral simulation study. This combines synthesis, actionable artifacts, and adversarial review — written to TWO separate output files.
 
 In Facet v2, persona backgrounds and simulations are in separate files. The persona backgrounds live in the personas directory (identity, psychology, domain profile, discovery). The simulations live in the simulations directory (option-by-option behavioral modeling, verdicts, copy variant reactions). You need BOTH to produce this analysis.
 
-The exercise config, all persona background files, and all simulation files have been provided — you should have already read them before reading this template.
+The study config, all persona background files, and all simulation files have been provided — you should have already read them before reading this template.
 
 ---
 
 ## Your Task
 
-Read every persona background file and every simulation file for this exercise. Then produce TWO output documents:
+Read every persona background file and every simulation file for this study. Then produce TWO output documents:
 
 1. **synthesis.md** — Parts 1 + 3 below (the DECISION document: analysis, recommendation, and counterargument)
 2. **artifacts.md** — Part 2 below (the ACTION document: usable copy, FAQ, marketing angles, validation plan)
@@ -121,7 +121,7 @@ Include: conversion rate, revenue per 1K visitors, per-user revenue at different
 
 ## 10. Risk Assessment
 
-What's the one risk of the recommended option? What mitigation does the exercise suggest? Name the persona(s) who most clearly illustrate the risk.
+What's the one risk of the recommended option? What mitigation does the study suggest? Name the persona(s) who most clearly illustrate the risk.
 
 ## 10b. Simulation Integrity Audit
 
@@ -134,7 +134,7 @@ Before finalizing the synthesis, check for known simulation biases:
 
 ## 11. Implementation Recommendations
 
-Based on the exercise findings, what should the company do? Be specific:
+Based on the study findings, what should the company do? Be specific:
 - Recommended pricing/feature/copy choice
 - Key copy language to use (quote from the winning variant and from persona reactions)
 - Segments to target first (and why — reference their referral dynamics)
@@ -158,7 +158,7 @@ Specific to this study type:
 
 # PART 2: ARTIFACTS (write to artifacts.md)
 
-These artifacts should be directly usable — copy that can be pasted into a website, FAQ answers that can be published, marketing angles that can inform campaigns. Every artifact must be grounded in specific persona data from the exercise, not generic best practices.
+These artifacts should be directly usable — copy that can be pasted into a website, FAQ answers that can be published, marketing angles that can inform campaigns. Every artifact must be grounded in specific persona data from the study, not generic best practices.
 
 ## 1. Recommended Page Copy
 
@@ -224,7 +224,7 @@ For each key finding from the synthesis, provide:
 
 You are now a devil's advocate. Construct the strongest possible case AGAINST the recommendation from Part 1. You are NOT trying to be balanced. You are trying to BREAK the recommendation. If it survives, it's stronger. If it doesn't, better to know now.
 
-**Important**: Base your counterargument on the synthesis and persona data ONLY. Do not reference the original product description or exercise config framing — argue against the recommendation on its own terms.
+**Important**: Base your counterargument on the synthesis and persona data ONLY. Do not reference the original product description or study config framing — argue against the recommendation on its own terms.
 
 ## 1. The Counterargument (2-3 paragraphs)
 
@@ -240,7 +240,7 @@ Identify 3-5 assumptions the synthesis relies on that could be wrong:
 
 ## 3. Confirmation Bias Signals
 
-Look for signs that the exercise was designed to reach its conclusion:
+Look for signs that the study was designed to reach its conclusion:
 - Are the segments balanced, or do more segments naturally favor one option?
 - Are the simulation parameters (drop rates, savings amounts, usage patterns) realistic or optimistic?
 - Do the personas who prefer the losing option get less narrative depth or sympathy?
@@ -249,7 +249,7 @@ Look for signs that the exercise was designed to reach its conclusion:
 
 ## 4. Missing Personas
 
-Name 3-5 types of users that the exercise doesn't include but should:
+Name 3-5 types of users that the study doesn't include but should:
 - Who they are
 - Why they matter
 - Which option they'd likely prefer

@@ -1,5 +1,5 @@
 ---
-exercise_name: copy-test-positioning
+study_name: copy-test-positioning
 study_type: copy
 options:
   - name: "Current positioning"

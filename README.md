@@ -56,25 +56,60 @@ cd facet
 # 1. Generate personas for your product
 ./sim.sh init --config examples/superhuman-product.md --name superhuman
 
-# 2. Run exercises against those personas
-./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md
-./sim.sh exercise --study output/superhuman/ --config examples/superhuman-copy.md
+# 2. Run studies against those personas
+./sim.sh study --panel output/superhuman/ --config examples/superhuman-pricing.md
+./sim.sh study --panel output/superhuman/ --config examples/superhuman-copy.md
 
 # 3. Check status
-./sim.sh status --study output/superhuman/
+./sim.sh status --panel output/superhuman/
 ```
 
-Personas are generated once and reused across exercises. A pricing exercise and a copy exercise share the same persona backgrounds.
+Personas are generated once and reused across studies. A pricing study and a copy study share the same persona backgrounds.
 
 ### Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--config` | Product config (init) or exercise config (exercise) | required |
+| `--config` | Product config (init) or study config (study) | required |
 | `--name` | Study name for output directory | config filename |
-| `--study` | Path to existing study directory | — |
+| `--panel` | Path to existing panel directory | — |
+| `--runs` | Number of simulation runs for stability testing | 1 |
 | `--concurrency` | Parallel persona generations/simulations | 5 |
 | `--calibration` | Real research data to ground personas ([details](#calibration)) | — |
+| `--output-dir` | Override base output directory | `./output/` |
+
+### Claude Code Plugin
+
+If you use Claude Code, install Facet as a plugin for a conversational research experience:
+
+```bash
+# As a skill (personal, available in all projects)
+git clone https://github.com/saraswatayu/facet.git ~/.claude/skills/facet
+
+# Or as a plugin (for development/testing)
+git clone https://github.com/saraswatayu/facet.git
+claude --plugin-dir ./facet
+```
+
+Then ask a product question:
+
+```
+/facet "Should I charge $15 or $30/month for my task management app?"
+```
+
+The skill scans your codebase for pricing and feature data, asks 2-3 calibration questions, generates a study config, and runs the full simulation phase by phase with progress updates. When it finishes: a research panel introduction, findings with honest confidence levels, and follow-up options. You'll get a desktop notification when the study is ready.
+
+You can also invoke the research agent directly: `@facet-researcher run a pricing study for this product`. The agent has persistent memory and remembers past studies across sessions.
+
+#### Headless / CI mode
+
+Run automated research without interaction:
+
+```bash
+claude -p "Run a Facet pricing study for this product with options at \$15 and \$30/month" \
+  --allowedTools "Bash,Read,Write,Glob,Grep" \
+  --output-format json
+```
 
 ---
 
@@ -90,7 +125,7 @@ INIT — run once per product
 │ matrix   │      │  behavioral economics profiles     │
 └──────────┘      └──────────────────────────────────┘
 
-EXERCISE — repeat for pricing, copy, features, onboarding, retention
+STUDY — repeat for pricing, copy, features, onboarding, retention
 ┌──────────────────────────┐      ┌──────────────────┐
 │  SIMULATE (parallel)     │      │  ANALYZE         │
 │                          │─────▶│                  │
@@ -154,11 +189,11 @@ Superhuman is a premium email client built for speed...
 - Sales professionals
 ```
 
-### Exercise Config (for `exercise`)
+### Study Config (for `study`)
 
 ```yaml
 ---
-exercise_name: pricing-tiers
+study_name: pricing-tiers
 study_type: pricing
 options:
   - name: "Model A"
@@ -220,8 +255,8 @@ output/{product}/
 ├── personas/                  # generated once, reused
 │   ├── persona-001.md
 │   └── ...
-└── exercises/
-    └── {exercise-name}/
+└── studies/
+    └── {study-name}/
         ├── simulations/
         │   ├── persona-001.md # decision arcs, verdicts
         │   └── ...
@@ -233,7 +268,7 @@ output/{product}/
 
 - **Illusion of depth.** "$38,500/year, $18.50/hour" is plausible fiction, not data. The richer the output, the easier it is to forget this.
 - **Can't know what it can't know.** Real users have DIY workarounds and half-formed habits no LLM can simulate.
-- **Config bias.** If your exercise config describes Option A more favorably, the entire simulation leans toward A.
+- **Config bias.** If your study config describes Option A more favorably, the entire simulation leans toward A.
 - **Run-to-run variance.** Identical parameters can produce different results.
 - **WEIRD bias.** LLMs are overtrained on English-language, Western, educated, middle-class perspectives.
 
