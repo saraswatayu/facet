@@ -863,6 +863,9 @@ show_status() {
                 local sim_count=0
                 if [ -d "${study_entry}/simulations" ]; then
                     sim_count=$(count_files "${study_entry}/simulations" "persona-*.md")
+                    local summary_count=0
+                    summary_count=$(count_files "${study_entry}/simulations" "persona-*-summary.md")
+                    sim_count=$((sim_count - summary_count))
                 fi
                 local has_synthesis="no"
                 [ -f "${study_entry}/synthesis.md" ] && has_synthesis="yes"
