@@ -147,10 +147,12 @@ YOU MUST run this exact command. Do NOT write configs by hand.
 First, read `${CLAUDE_SKILL_DIR}/references/study-type-guide.md` to pick the study type.
 Then read `${CLAUDE_SKILL_DIR}/references/config-examples.md` for the YAML format.
 
-Then run:
+Then:
 
-```bash
-echo '{
+1. Use the **Write** tool to create `.facet/output/.config-input.json` with the JSON object:
+
+```json
+{
   "product_name": "<NAME>",
   "product_description": "<DESCRIPTION from conversation, max 500 words>",
   "research_question": "<USER ORIGINAL QUESTION>",
@@ -161,8 +163,16 @@ echo '{
     {"name": "<OPTION 2>", "description": "<USER DESCRIPTION>"}
   ],
   "calibration_context": "<INTERVIEW ANSWERS AS PARAGRAPHS>"
-}' | python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir .facet/output
+}
 ```
+
+2. Then run:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir .facet/output < .facet/output/.config-input.json
+```
+
+This avoids shell quoting issues with apostrophes, dollar signs, and backticks in user input.
 
 **Study naming:** Generate a short, descriptive slug for `study_name` that captures
 what's being tested (e.g., "homepage-layout-comparison", "pricing-tiers-freelancers").
@@ -341,11 +351,15 @@ After the study completes (or fails), reflect:
 - Did the config need manual fixes before running?
 - Was there a sycophancy problem (>70% positive)?
 
-If yes, log an operational learning:
+If yes, log an operational learning. Use the **Read** tool to read `.facet/learnings.jsonl`
+(or note it doesn't exist yet), then use the **Write** tool to append a JSON line:
 
-```bash
-echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","study":"<STUDY_NAME>","type":"<operational|quality|config>","key":"<SHORT_KEY>","insight":"<DESCRIPTION>","confidence":<1-10>}' >> .facet/learnings.jsonl
+```json
+{"ts":"2026-04-02T12:00:00Z","study":"<STUDY_NAME>","type":"<operational|quality|config>","key":"<SHORT_KEY>","insight":"<DESCRIPTION>","confidence":<1-10>}
 ```
+
+Use the current UTC timestamp. Do NOT use `echo` with shell interpolation — the Write
+tool handles special characters (apostrophes, dollar signs) safely.
 
 Only log genuine discoveries. A good test: would knowing this save 5+ minutes or
 prevent a bad study in a future session? If yes, log it. Don't log transient errors
