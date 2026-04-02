@@ -96,9 +96,19 @@ Then ask a product question:
 /facet "Should I charge $15 or $30/month for my task management app?"
 ```
 
-The skill scans your codebase for pricing and feature data, asks 2-3 calibration questions, generates a study config, and delegates to a background research agent that runs the full simulation while you keep working. When it finishes: a research panel introduction, findings with honest confidence levels, and follow-up options.
+The skill scans your codebase for pricing and feature data, asks 2-3 calibration questions, generates a study config, and runs the full simulation phase by phase with progress updates. When it finishes: a research panel introduction, findings with honest confidence levels, and follow-up options. You'll get a desktop notification when the study is ready.
 
 You can also invoke the research agent directly: `@facet-researcher run a pricing study for this product`. The agent has persistent memory and remembers past studies across sessions.
+
+#### Headless / CI mode
+
+Run automated research without interaction:
+
+```bash
+claude -p "Run a Facet pricing study for this product with options at \$15 and \$30/month" \
+  --allowedTools "Bash,Read,Write,Glob,Grep" \
+  --output-format json
+```
 
 ---
 

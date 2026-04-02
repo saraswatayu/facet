@@ -144,6 +144,49 @@ for phase_name, vals in durations.items():
     echo "Estimated time: ~${minutes} min (${personas} personas, ${exercises} exercises, concurrency ${concurrency})"
 }
 
+# --- Template version-locking ---
+ensure_version_locked_template() {
+    local source="$1"
+    local destination="$2"
+
+    if [ ! -f "$destination" ]; then
+        cp "$source" "$destination"
+    fi
+}
+
+version_lock_study_templates() {
+    local study_dir="$1"
+
+    mkdir -p "${study_dir}/.templates"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/plan.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/persona.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/cross-synthesis.md" "${study_dir}/.templates/cross-synthesis.md"
+}
+
+version_lock_exercise_templates() {
+    local exercise_dir="$1"
+    local study_type="${2:-}"
+
+    mkdir -p "${exercise_dir}/.templates"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/simulation.md" "${exercise_dir}/.templates/simulation.md"
+    ensure_version_locked_template "${SCRIPT_DIR}/templates/analysis.md" "${exercise_dir}/.templates/analysis.md"
+
+    if [ -n "$study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
+        ensure_version_locked_template "${SCRIPT_DIR}/study-types/${study_type}.md" "${exercise_dir}/.templates/${study_type}.md"
+    fi
+}
+
+# --- Clean run directories for fresh stability runs ---
+prepare_run_outputs() {
+    local simulations_dir="$1"
+    local logs_dir="$2"
+
+    mkdir -p "$simulations_dir"
+    mkdir -p "$logs_dir"
+    find "$simulations_dir" -maxdepth 1 -type f -name 'persona-*.md' -delete
+    find "$logs_dir" -maxdepth 1 -type f -name 'persona-*.log' -delete
+}
+
 # --- Phase: Plan ---
 run_plan() {
     local config="$1"
@@ -621,7 +664,7 @@ Use full persona backgrounds for arc tracking."
         -p "You are running the Cross-Exercise Synthesis phase of a Facet behavioral simulation study.
 
 Read these files for context:
-1. Cross-synthesis template (follow these instructions): ${study_dir}/.templates/cross-synthesis.md
+1. Cross-synthesis template (follow these instructions): ${cross_synthesis_template}
 
 Then read ALL per-exercise synthesis files:
 $(for f in "${synthesis_files[@]}"; do echo "- $f"; done)
@@ -637,7 +680,7 @@ Write the cross-synthesis to: ${study_dir}/cross-synthesis.md" \
 
     if [ ! -s "${study_dir}/cross-synthesis.md" ]; then
         echo "ERROR: Cross-synthesis was not generated."
-        exit 1
+        return 1
     fi
 
     echo ""
@@ -887,12 +930,7 @@ main() {
             # Version-lock exercise-phase templates + study-type rules
             local study_type
             study_type=$(parse_frontmatter "$config" "study_type")
-            mkdir -p "${exercise_dir}/.templates"
-            cp "${SCRIPT_DIR}/templates/simulation.md" "${exercise_dir}/.templates/"
-            cp "${SCRIPT_DIR}/templates/analysis.md" "${exercise_dir}/.templates/"
-            if [ -n "$study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
-                cp "${SCRIPT_DIR}/study-types/${study_type}.md" "${exercise_dir}/.templates/"
-            fi
+            version_lock_exercise_templates "$exercise_dir" "$study_type"
             echo "Templates version-locked to ${exercise_dir}/.templates/"
 
             local ex_persona_count
@@ -913,28 +951,15 @@ main() {
 
                 for run_num in $(seq 1 "$runs"); do
                     local run_sim_dir="${exercise_dir}/simulations"
+                    local run_log_dir="${exercise_dir}/logs"
                     if [ "$run_num" -gt 1 ]; then
                         run_sim_dir="${exercise_dir}/simulations-run-${run_num}"
-                        mkdir -p "$run_sim_dir"
+                        run_log_dir="${exercise_dir}/logs-run-${run_num}"
                     fi
 
                     echo "Run ${run_num}/${runs}:"
-
-                    # For runs > 1, temporarily swap simulations dir
-                    if [ "$run_num" -gt 1 ]; then
-                        local orig_sim_dir="${exercise_dir}/simulations"
-                        mv "$orig_sim_dir" "${exercise_dir}/simulations-run-1" 2>/dev/null || true
-                        mkdir -p "$orig_sim_dir"
-                    fi
-
-                    run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency"
-
-                    if [ "$run_num" -gt 1 ]; then
-                        # Move this run's results to its own directory
-                        mv "${exercise_dir}/simulations" "$run_sim_dir"
-                        # Restore run-1 as the main simulations dir
-                        mv "${exercise_dir}/simulations-run-1" "${exercise_dir}/simulations"
-                    fi
+                    prepare_run_outputs "$run_sim_dir" "$run_log_dir"
+                    run_simulate "$study_dir" "$config" "$exercise_dir" "$concurrency" "$run_sim_dir" "$run_log_dir"
                 done
 
                 # Run analysis on the first run's simulations

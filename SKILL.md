@@ -3,6 +3,7 @@ name: facet
 description: Run product research studies with AI-generated personas. Simulates pricing, features, onboarding, copy, and retention decisions with 48+ psychologically detailed personas. Ask a product question, get a research synthesis.
 argument-hint: "[research question]"
 allowed-tools: Bash, Read, Write, Glob, Grep
+disable-model-invocation: true
 ---
 
 # /facet
