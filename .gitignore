@@ -6,3 +6,4 @@ studies/
 TODOS.md
 __pycache__/
 *.pyc
+tmp_*/
