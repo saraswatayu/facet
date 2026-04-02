@@ -554,10 +554,14 @@ Write the artifacts to: ${exercise_dir}/artifacts.md" \
 run_cross_synthesize() {
     local study_dir="$1"
 
-    # Discover exercises with completed synthesis
+    # Discover exercises with completed synthesis and artifacts
     local synthesis_files=()
+    local artifacts_files=()
     for f in "${study_dir}/exercises"/*/synthesis.md; do
         [ -f "$f" ] && synthesis_files+=("$f")
+    done
+    for f in "${study_dir}/exercises"/*/artifacts.md; do
+        [ -f "$f" ] && artifacts_files+=("$f")
     done
 
     if [ "${#synthesis_files[@]}" -eq 0 ]; then
@@ -612,6 +616,9 @@ Read these files for context:
 
 Then read ALL per-exercise synthesis files:
 $(for f in "${synthesis_files[@]}"; do echo "- $f"; done)
+
+Then read ALL per-exercise artifacts files:
+$(for f in "${artifacts_files[@]}"; do echo "- $f"; done)
 
 ${persona_instruction}
 

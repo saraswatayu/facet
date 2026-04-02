@@ -4,9 +4,10 @@ You are producing a unified synthesis across multiple exercises in a Facet behav
 
 You have been given:
 - Per-exercise synthesis files (each contains analysis, recommendations, and counterarguments for one exercise)
+- Per-exercise artifacts files (actionable deliverables — copy, FAQ, objection scripts, validation plans)
 - Persona background files or summaries (who the personas are)
 
-Read ALL provided synthesis files and persona files before writing.
+Read ALL provided synthesis and artifacts files before writing. Note: synthesis files may exceed the read limit. Use offset and limit parameters to read them in sections (e.g., first 500 lines, then offset 500). Do not skip any synthesis file.
 
 ---
 
@@ -62,7 +63,9 @@ For the 10-15 most interesting personas, track their journey across exercises. P
 | ID | Name | Segment | Exercise 1 | Exercise 2 | ... | Arc Summary |
 |----|------|---------|-----------|-----------|-----|-------------|
 
-Then for each tracked persona, write 2-3 sentences explaining their arc: "Greg Thompson (#9) was enthusiastic about the core concept but hostile to passive monitoring. Across 5 exercises, he consistently valued transparency and control — any feature that removed human oversight was rejected. He represents the 'power user who wants AI as a tool, not a replacement' archetype."
+Then for each tracked persona, write a **full paragraph** explaining their arc. This is the most valuable section of the cross-synthesis — it turns simulated data points into human stories. The paragraph should connect their background (who they are, what they care about) to their journey across exercises (how their reactions evolved or stayed consistent), ending with what archetype they represent. Example: "Greg Thompson (#9) was enthusiastic about the core concept but hostile to passive monitoring. Across 5 exercises, he consistently valued transparency and control — any feature that removed human oversight was rejected. He represents the 'power user who wants AI as a tool, not a replacement' archetype."
+
+Write at least 5 full-paragraph persona narratives. These are the stories that make the research memorable.
 
 Select personas by:
 - Strongest advocates (across exercises, not just one)
@@ -87,7 +90,34 @@ Rate overall study confidence:
 - **Findings that are fragile** (appear in one exercise, one segment, or depend on marginal personas)
 - **What real-user validation is most needed** (rank by priority)
 
-### 8. Study Limitations
+### 8. Recommended Next Exercises
+
+Based on what this study tested and what it revealed, what exercises should be run next? Consider:
+
+- **Gaps in coverage**: What aspects of the product were NOT tested? (e.g., if you tested features and trust but not pricing or onboarding, recommend those)
+- **Follow-up questions**: What new questions did the findings raise? Design exercises to answer them.
+- **Validation priorities**: Which fragile findings would benefit from a differently-framed exercise?
+
+For each recommendation:
+- **Exercise name and study type**
+- **What it would test** (1-2 sentences)
+- **Why this study's findings call for it** (which specific finding or gap motivates it)
+- **Expected persona coverage**: Can you reuse the same personas, or does this need a different population?
+
+Recommend 2-4 exercises. Be specific enough that someone could write the exercise config from your description.
+
+### 9. Cross-Exercise Artifacts
+
+Synthesize the most actionable deliverables from across all exercise artifacts files:
+
+- **The single best positioning statement** (drawing from copy artifacts, concept reactions, and competitive findings)
+- **Top 5 objections and responses** (deduplicated and ranked across exercises)
+- **Segment-specific go-to-market angles** (one sentence per segment, informed by all exercises)
+- **The referral stories that survived multiple exercises** (which word-of-mouth narratives are consistent?)
+
+This section should contain things a marketing or product team can use immediately.
+
+### 10. Study Limitations
 
 - Note the total persona count and segment coverage
 - Flag any segments or demographics that are underrepresented
