@@ -27,7 +27,7 @@ studies:
 
 Full product audit. Test onboarding, feature importance, pricing, and retention with the same personas to understand the complete user lifecycle. The cross-synthesis will reveal how early experiences (onboarding) predict later behavior (retention).
 
-## Exercise Configs (create these files)
+## Study Configs (create these files)
 
 ### studies/onboarding.md
 ```yaml

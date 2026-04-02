@@ -90,7 +90,7 @@ Rate overall study confidence:
 - **Findings that are fragile** (appear in one study, one segment, or depend on marginal personas)
 - **What real-user validation is most needed** (rank by priority)
 
-### 8. Recommended Next Studys
+### 8. Recommended Next Studies
 
 Based on what this study tested and what it revealed, what studies should be run next? Consider:
 

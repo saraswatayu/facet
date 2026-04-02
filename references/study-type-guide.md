@@ -33,7 +33,7 @@ Personas get hedonic adaptation, sunk cost, peak-end rule.
 **Custom** — "Something that doesn't fit the above." No framework injection.
 Personas use whatever decision-making is natural to their background.
 
-## Multi-Exercise Studies
+## Multi-Study Configurations
 
 Some questions need multiple studies. Common combos:
 - "Should we launch this?" → concept reactions + pricing + features (3 studies)

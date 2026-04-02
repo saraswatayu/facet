@@ -12,7 +12,7 @@ Two or more pricing models for the same product. The goal is to determine which 
 3. Produces better referral dynamics
 4. Creates higher user satisfaction (NPS)
 
-## Exercise-Specific Outcome Targets
+## Study-Specific Outcome Targets
 
 These apply to simulations, not persona backgrounds:
 - At least 1 persona should trigger a money-back guarantee or refund scenario

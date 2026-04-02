@@ -16,7 +16,7 @@ sim.sh status:     Study progress, study completion, cross-synthesis readiness
 ```
 
 Primary interface:
-- **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `Codex --print` subprocess.
+- **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `claude --print` subprocess.
 
 Key design: personas are generated ONCE and reused across multiple studies. The `study` subcommand reads a single study config containing all studies and runs the full pipeline.
 
@@ -32,7 +32,7 @@ Key design: personas are generated ONCE and reused across multiple studies. The 
 
 ### Tool Restrictions
 
-All `Codex` invocations are restricted to `Read,Write,Glob,Grep`. No Bash — no escape hatch. The one exception: calibration directory mode adds Glob and Grep to persona generation (normally Read,Write only).
+All `claude` invocations are restricted to `Read,Write,Glob,Grep`. No Bash — no escape hatch. The one exception: calibration directory mode adds Glob and Grep to persona generation (normally Read,Write only).
 
 ## Wave-Based Generation
 
@@ -55,7 +55,7 @@ All four templates (`plan.md`, `persona.md`, `simulation.md`, `analysis.md`) fol
 
 1. **Integrity rules** — anti-sycophancy guardrails. Every template explicitly permits rejection, skepticism, indifference. "This persona is NOT obligated to like the product."
 2. **Quality bar** — specific > generic. "$38,500/year" not "moderate salary." Named neighborhoods, not "urban area."
-3. **Thinking steps** — brainstorm/analysis sections marked "do NOT include in output." These prompt Codex to reason before writing but keep the output clean.
+3. **Thinking steps** — brainstorm/analysis sections marked "do NOT include in output." These prompt Claude to reason before writing but keep the output clean.
 4. **Consistency self-check** — templates end with verification that stated facts, numbers, and decisions are internally consistent.
 
 ### Study-Type Rules
@@ -87,7 +87,7 @@ The `--calibration` flag grounds personas in real-world data instead of LLM prio
 
 **Single file mode:** File content is injected directly into the planning prompt.
 
-**Directory mode:** Codex uses Glob to discover files. If `manifest.md` exists at the directory root, it's read first — it describes each file's purpose. Codex selectively reads the most relevant files. The plan output includes a "Calibration Sources" section listing what was read and extracted. Directory mode enables Glob/Grep tools for persona generation (normally Read/Write only).
+**Directory mode:** Claude uses Glob to discover files. If `manifest.md` exists at the directory root, it's read first — it describes each file's purpose. Claude selectively reads the most relevant files. The plan output includes a "Calibration Sources" section listing what was read and extracted. Directory mode enables Glob/Grep tools for persona generation (normally Read/Write only).
 
 Supported file types: `.md`, `.csv`, `.txt`, `.json`, `.yaml`, `.yml`.
 
@@ -169,7 +169,7 @@ These are invariants — do not break them:
 - All numbers in personas/simulations must be specific and internally consistent
 - Template sections adapt to product domain (not hardcoded to travel/flights)
 - Templates are version-locked into `.templates/` at init and study time
-- No Bash tool in `Codex` invocations — Read, Write, Glob, Grep only
+- No Bash tool in `claude` invocations — Read, Write, Glob, Grep only
 
 ## Adding a New Study Type
 

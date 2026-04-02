@@ -13,7 +13,7 @@ Two or more onboarding flows for the same product. The goal is to determine whic
 4. Produces the fastest time-to-value
 5. Sets the best foundation for retention and referral
 
-## Exercise-Specific Outcome Targets
+## Study-Specific Outcome Targets
 
 - At least 1 persona should abandon onboarding before completion
 - At least 1 persona should complete onboarding but never return after day 1

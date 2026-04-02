@@ -24,7 +24,7 @@ studies:
 
 Answer: "Should we launch this?" Test concept reactions, feature importance, and pricing sensitivity with the same personas to get a unified picture of product-market fit.
 
-## Exercise Configs (create these files)
+## Study Configs (create these files)
 
 ### studies/concept-reactions.md
 ```yaml

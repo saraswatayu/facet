@@ -68,14 +68,14 @@ estimate_time() {
     # Search for historical data in output/ (and --output-dir if provided)
     local history_file
     history_file=$(mktemp "${TMPDIR:-/tmp}/facet-history-XXXXXXXX")
-    python3 -c "
+    FACET_SCRIPT_DIR="$SCRIPT_DIR" FACET_EXTRA_DIR="$extra_search_dir" python3 -c "
 import json, os, sys, glob
 from datetime import datetime
 
 durations = {'generate': [], 'simulate': [], 'analyze': [], 'cross-synthesize': []}
 
-search_paths = ['${SCRIPT_DIR}/output/**/.status']
-extra = '${extra_search_dir}'
+search_paths = [os.environ.get('FACET_SCRIPT_DIR', '') + '/output/**/.status']
+extra = os.environ.get('FACET_EXTRA_DIR', '')
 if extra:
     search_paths.append(extra + '/**/.status')
 
@@ -171,7 +171,8 @@ version_lock_study_phase_templates() {
     ensure_version_locked_template "${SCRIPT_DIR}/templates/simulation.md" "${study_dir}/.templates/simulation.md"
     ensure_version_locked_template "${SCRIPT_DIR}/templates/analysis.md" "${study_dir}/.templates/analysis.md"
 
-    if [ -n "$study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
+    # Validate study_type contains no path separators (prevent path traversal)
+    if [ -n "$study_type" ] && [[ "$study_type" != */* ]] && [[ "$study_type" != *..* ]] && [ -f "${SCRIPT_DIR}/study-types/${study_type}.md" ]; then
         ensure_version_locked_template "${SCRIPT_DIR}/study-types/${study_type}.md" "${study_dir}/.templates/${study_type}.md"
     fi
 }
@@ -519,7 +520,7 @@ run_simulate() {
 
 Read these files for context:
 1. Persona background: ${persona_file}
-2. Exercise config (options to test): ${study_config}
+2. Study config (options to test): ${study_config}
 3. Simulation template (follow these instructions): ${study_dir}/.templates/simulation.md
 4. Study type simulation rules: ${study_dir}/.templates/${study_type}.md
 
@@ -612,7 +613,7 @@ If you need full simulation detail for a specific persona (e.g., for the Key Per
         -p "You are running the Analysis phase of a Facet behavioral simulation study.
 
 Read these files for context:
-1. Exercise config: ${study_config}
+1. Study config: ${study_config}
 2. Analysis template (follow these instructions): ${study_dir}/.templates/analysis.md
 
 Then read ALL persona background files in: ${panel_dir}/personas/
@@ -766,8 +767,8 @@ Use full persona backgrounds for arc tracking."
     update_status "$panel_dir" "cross-synthesize" "started"
 
     echo "╔═══════════════════════════════════════════════╗"
-    echo "║  CROSS-EXERCISE SYNTHESIS                      ║"
-    echo "║  Exercises: ${study_count}, Personas: ${persona_count}                    ║"
+    echo "║  CROSS-STUDY SYNTHESIS                           ║"
+    echo "║  Studies: ${study_count}, Personas: ${persona_count}                      ║"
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
@@ -781,7 +782,7 @@ Use full persona backgrounds for arc tracking."
     claude --print --verbose --output-format stream-json \
         --max-turns 50 \
         --allowedTools "Read,Write,Glob,Grep" \
-        -p "You are running the Cross-Exercise Synthesis phase of a Facet behavioral simulation study.
+        -p "You are running the Cross-Study Synthesis phase of a Facet behavioral simulation study.
 
 Read these files for context:
 1. Cross-synthesis template (follow these instructions): ${cross_synthesis_template}
@@ -827,7 +828,7 @@ show_status() {
     # List studies
     if [ -d "${panel_dir}/studies" ]; then
         echo ""
-        echo "Exercises:"
+        echo "Studies:"
         for study_entry in "${panel_dir}/studies"/*/; do
             if [ -d "$study_entry" ]; then
                 local ename
@@ -844,7 +845,7 @@ show_status() {
             fi
         done
     else
-        echo "Exercises: none"
+        echo "Studies: none"
     fi
 
     # Cross-synthesis status
@@ -941,7 +942,8 @@ main() {
 
     # Resolve output_dir to absolute path
     if [ -n "$output_dir" ] && [[ "$output_dir" != /* ]]; then
-        output_dir="$(cd "$output_dir" 2>/dev/null && pwd || echo "$output_dir")"
+        mkdir -p "$output_dir" 2>/dev/null || true
+        output_dir="$(cd "$output_dir" 2>/dev/null && pwd || realpath "$output_dir" 2>/dev/null || echo "$(pwd)/$output_dir")"
     fi
 
     # Validate calibration path if provided (file or directory)
@@ -1050,9 +1052,7 @@ main() {
             local study_name
             study_name=$(parse_frontmatter "$config" "study_name")
             if [ -z "$study_name" ]; then
-                # Fallback: try study_name key, then derive from config filename
-                study_name=$(parse_frontmatter "$config" "study_name" 2>/dev/null || true)
-                [ -z "$study_name" ] && study_name=$(basename "$config" .md)
+                study_name=$(basename "$config" .md)
             fi
 
             local study_dir="${panel_dir}/studies/${study_name}"
@@ -1118,7 +1118,7 @@ main() {
 
 Read these files for context:
 1. Stability template: ${SCRIPT_DIR}/templates/stability.md
-2. Exercise config: ${config}
+2. Study config: ${config}
 
 The study was run ${runs} times with the same personas. Read simulation files from each run:
 ${sim_dirs_list}
@@ -1128,7 +1128,7 @@ Write the stability report to: ${study_dir}/stability-report.md" \
                     2>&1 | $STREAM_FILTER
 
                 echo ""
-                echo "EXERCISE COMPLETE (stability testing: ${runs} runs)"
+                echo "STUDY COMPLETE (stability testing: ${runs} runs)"
                 echo "Results: ${study_dir}/"
                 echo "  synthesis.md — analysis from run 1"
                 echo "  stability-report.md — per-persona consistency across ${runs} runs"
@@ -1137,7 +1137,7 @@ Write the stability report to: ${study_dir}/stability-report.md" \
                 run_analyze "$panel_dir" "$config" "$study_dir"
 
                 echo ""
-                echo "EXERCISE COMPLETE"
+                echo "STUDY COMPLETE"
                 echo "Results: ${study_dir}/"
                 echo "  synthesis.md — analysis + recommendation + counterargument"
                 echo "  artifacts.md — actionable deliverables"
@@ -1290,7 +1290,7 @@ Write the comparison to: ${compare_output}" \
             echo ""
             echo "╔═══════════════════════════════════════════════╗"
             echo "║  FACET STUDY                                   ║"
-            echo "║  Exercises: ${study_count}, Personas: $((segments * per_segment))                   ║"
+            echo "║  Studies: ${study_count}, Personas: $((segments * per_segment))                     ║"
             echo "╚═══════════════════════════════════════════════╝"
             estimate_time "$((segments * per_segment))" "$study_count" "$concurrency" "$output_dir"
             echo ""
@@ -1335,7 +1335,7 @@ Write the comparison to: ${compare_output}" \
                 fi
 
                 if [ ! -f "$study_config_path" ]; then
-                    echo "ERROR: Exercise config not found: $study_config_path"
+                    echo "ERROR: Study config not found: $study_config_path"
                     if [ "$continue_on_error" = "true" ]; then
                         ((study_failures++)) || true
                         continue
@@ -1357,7 +1357,7 @@ Write the comparison to: ${compare_output}" \
                 fi
 
                 echo ""
-                echo "Exercise ${study_num}/${study_count}: ${ex_name}"
+                echo "Study ${study_num}/${study_count}: ${ex_name}"
                 echo "---"
 
                 # Set up study directory and version-lock templates
@@ -1389,9 +1389,14 @@ Write the comparison to: ${compare_output}" \
                 fi
             done <<< "$study_configs"
 
-            # Phase 3: Cross-synthesis
-            echo ""
-            run_cross_synthesize "$panel_dir"
+            # Phase 3: Cross-synthesis (skip if all studies failed)
+            if [ "$study_failures" -lt "$study_count" ]; then
+                echo ""
+                run_cross_synthesize "$panel_dir"
+            else
+                echo ""
+                echo "WARNING: All ${study_count} studies failed. Skipping cross-synthesis."
+            fi
 
             echo ""
             echo "╔═══════════════════════════════════════════════╗"

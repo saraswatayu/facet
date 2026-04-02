@@ -22,7 +22,7 @@ studies:
 
 Answer: "How should we price this?" Deep-dive into 2-3 pricing models with a large persona set. Single study, maximum depth.
 
-## Exercise Config (create this file)
+## Study Config (create this file)
 
 ### studies/pricing-models.md
 ```yaml

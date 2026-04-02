@@ -23,7 +23,7 @@ studies:
 
 Answer: "Where do we fit?" Test positioning/messaging variants and feature differentiation to find the angles that resonate with each segment.
 
-## Exercise Configs (create these files)
+## Study Configs (create these files)
 
 ### studies/positioning-variants.md
 ```yaml

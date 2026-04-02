@@ -12,7 +12,7 @@ Two or more retention strategies, product changes, or lifecycle interventions fo
 3. Produces the highest renewal/repurchase rates
 4. Creates the strongest resistance to competitive alternatives
 
-## Exercise-Specific Outcome Targets
+## Study-Specific Outcome Targets
 
 - At least 2 personas should churn (for different reasons)
 - At least 1 persona should almost churn but be retained by a specific mechanism

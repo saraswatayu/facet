@@ -24,7 +24,7 @@ studies:
 
 Answer: "How should we onboard users?" Test 2-3 onboarding flows and feature discovery approaches. Identify where personas drop off and what creates psychological ownership.
 
-## Exercise Configs (create these files)
+## Study Configs (create these files)
 
 ### studies/onboarding-flows.md
 ```yaml

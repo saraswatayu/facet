@@ -72,7 +72,8 @@ Personas are generated once and reused across studies. A pricing study and a cop
 |------|-------------|---------|
 | `--config` | Product config (init) or study config (study) | required |
 | `--name` | Study name for output directory | config filename |
-| `--study` | Path to existing study directory | — |
+| `--panel` | Path to existing panel directory | — |
+| `--runs` | Number of simulation runs for stability testing | 1 |
 | `--concurrency` | Parallel persona generations/simulations | 5 |
 | `--calibration` | Real research data to ground personas ([details](#calibration)) | — |
 | `--output-dir` | Override base output directory | `./output/` |
@@ -124,7 +125,7 @@ INIT — run once per product
 │ matrix   │      │  behavioral economics profiles     │
 └──────────┘      └──────────────────────────────────┘
 
-EXERCISE — repeat for pricing, copy, features, onboarding, retention
+STUDY — repeat for pricing, copy, features, onboarding, retention
 ┌──────────────────────────┐      ┌──────────────────┐
 │  SIMULATE (parallel)     │      │  ANALYZE         │
 │                          │─────▶│                  │
