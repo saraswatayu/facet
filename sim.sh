@@ -975,9 +975,15 @@ main() {
     # Derive study_dir from config if not provided
     if [ -z "$study_dir" ] && [ -n "$config" ]; then
         if [ -z "$study_name" ]; then
-            study_name=$(basename "$config" .md)
-            # Strip common suffixes for cleaner directory names
-            study_name="${study_name%-product}"
+            # Try to extract a study_name field from the config frontmatter
+            study_name=$(parse_frontmatter "$config" "study_name" 2>/dev/null || true)
+            if [ -z "$study_name" ]; then
+                study_name=$(basename "$config" .md)
+                # Strip common suffixes for cleaner directory names
+                study_name="${study_name%-product}"
+                study_name="${study_name%-config}"
+                study_name="${study_name%-study}"
+            fi
         fi
         local base_dir="${output_dir:-${SCRIPT_DIR}/output}"
         study_dir="${base_dir}/${study_name}"
@@ -991,6 +997,15 @@ main() {
     case "$cmd" in
         init)
             [ -z "$config" ] && { echo "Usage: ./sim.sh init --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"; exit 1; }
+
+            # Overwrite protection: refuse to init into a directory with existing study data
+            if [ -f "${study_dir}/plan.md" ]; then
+                echo "ERROR: Study already exists at ${study_dir}/"
+                echo "  Existing plan: ${study_dir}/plan.md"
+                echo "  To re-run, use a different --name or delete the existing study."
+                exit 1
+            fi
+
             mkdir -p "${study_dir}/personas"
 
             # Version-lock init-phase templates
