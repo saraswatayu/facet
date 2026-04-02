@@ -3,9 +3,12 @@ set -euo pipefail
 
 # Facet v2 — Pre-Launch Simulation Engine
 # Usage:
-#   ./sim.sh init     --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md]
+#   ./sim.sh init     --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md] [--output-dir /path/to/output]
 #   ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md [--concurrency 5]
 #   ./sim.sh status   --study output/superhuman/
+#
+# --output-dir: override base output directory (default: ./output/). Used by /facet skill
+#               to write study output to the user's project instead of the Facet install dir.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
@@ -54,7 +57,7 @@ update_status() {
 
 # --- Time estimation ---
 estimate_time() {
-    local personas="$1" exercises="${2:-1}" concurrency="${3:-5}"
+    local personas="$1" exercises="${2:-1}" concurrency="${3:-5}" extra_search_dir="${4:-}"
 
     # Try to get historical averages from past .status files
     local avg_gen_per_persona=90  # seconds, baseline
@@ -62,7 +65,7 @@ estimate_time() {
     local avg_analysis=120
     local avg_cross_synth=180
 
-    # Search for historical data in output/
+    # Search for historical data in output/ (and --output-dir if provided)
     local history_file
     history_file=$(mktemp "${TMPDIR:-/tmp}/facet-history-XXXXXXXX")
     python3 -c "
@@ -71,39 +74,45 @@ from datetime import datetime
 
 durations = {'generate': [], 'simulate': [], 'analyze': [], 'cross-synthesize': []}
 
-for status_file in glob.glob('${SCRIPT_DIR}/output/**/.status', recursive=True):
-    phases = {}
-    try:
-        with open(status_file) as f:
-            for line in f:
-                line = line.strip()
-                if not line: continue
-                obj = json.loads(line)
-                phase = obj.get('phase', '')
-                status = obj.get('status', '')
-                ts = obj.get('timestamp', '')
-                count = obj.get('count', 0)
-                if ts and phase:
-                    key = (phase, status)
-                    phases[key] = {'ts': ts, 'count': count}
-    except (json.JSONDecodeError, IOError):
-        continue
+search_paths = ['${SCRIPT_DIR}/output/**/.status']
+extra = '${extra_search_dir}'
+if extra:
+    search_paths.append(extra + '/**/.status')
 
-    for phase_name in durations:
-        started = phases.get((phase_name, 'started'))
-        completed = phases.get((phase_name, 'complete'))
-        if started and completed:
-            try:
-                t1 = datetime.fromisoformat(started['ts'].replace('Z', '+00:00'))
-                t2 = datetime.fromisoformat(completed['ts'].replace('Z', '+00:00'))
-                dur = (t2 - t1).total_seconds()
-                count = completed.get('count', 1)
-                if dur > 0 and count > 0 and phase_name in ('generate', 'simulate'):
-                    durations[phase_name].append(dur / count)
-                elif dur > 0:
-                    durations[phase_name].append(dur)
-            except (ValueError, TypeError):
-                pass
+for pattern in search_paths:
+    for status_file in glob.glob(pattern, recursive=True):
+        phases = {}
+        try:
+            with open(status_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line: continue
+                    obj = json.loads(line)
+                    phase = obj.get('phase', '')
+                    status = obj.get('status', '')
+                    ts = obj.get('timestamp', '')
+                    count = obj.get('count', 0)
+                    if ts and phase:
+                        key = (phase, status)
+                        phases[key] = {'ts': ts, 'count': count}
+        except (json.JSONDecodeError, IOError):
+            continue
+
+        for phase_name in durations:
+            started = phases.get((phase_name, 'started'))
+            completed = phases.get((phase_name, 'complete'))
+            if started and completed:
+                try:
+                    t1 = datetime.fromisoformat(started['ts'].replace('Z', '+00:00'))
+                    t2 = datetime.fromisoformat(completed['ts'].replace('Z', '+00:00'))
+                    dur = (t2 - t1).total_seconds()
+                    count = completed.get('count', 1)
+                    if dur > 0 and count > 0 and phase_name in ('generate', 'simulate'):
+                        durations[phase_name].append(dur / count)
+                    elif dur > 0:
+                        durations[phase_name].append(dur)
+                except (ValueError, TypeError):
+                    pass
 
 for phase_name, vals in durations.items():
     if vals:
@@ -750,7 +759,7 @@ main() {
     local cmd="${1:-help}"
     shift || true
 
-    local config="" study_dir="" study_dir2="" study_name="" concurrency="5" calibration="" continue_on_error="false" runs="1"
+    local config="" study_dir="" study_dir2="" study_name="" concurrency="5" calibration="" continue_on_error="false" runs="1" output_dir=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -762,9 +771,15 @@ main() {
             --calibration) calibration="$2"; shift 2 ;;
             --continue-on-error) continue_on_error="true"; shift ;;
             --runs) runs="$2"; shift 2 ;;
+            --output-dir) output_dir="$2"; shift 2 ;;
             *) echo "Unknown argument: $1"; exit 1 ;;
         esac
     done
+
+    # Resolve output_dir to absolute path
+    if [ -n "$output_dir" ] && [[ "$output_dir" != /* ]]; then
+        output_dir="$(cd "$output_dir" 2>/dev/null && pwd || echo "$output_dir")"
+    fi
 
     # Validate calibration path if provided (file or directory)
     local cal_file_count=0
@@ -803,7 +818,8 @@ main() {
             # Strip common suffixes for cleaner directory names
             study_name="${study_name%-product}"
         fi
-        study_dir="${SCRIPT_DIR}/output/${study_name}"
+        local base_dir="${output_dir:-${SCRIPT_DIR}/output}"
+        study_dir="${base_dir}/${study_name}"
     fi
 
     # Resolve study_dir to absolute path
@@ -836,7 +852,7 @@ main() {
                     echo "Calibration: $(basename "$calibration")"
                 fi
             fi
-            estimate_time "$total_personas" 0 "$concurrency"
+            estimate_time "$total_personas" 0 "$concurrency" "$output_dir"
             echo ""
             run_plan "$config" "$study_dir" "$calibration"
             run_generate "$config" "$study_dir" "$concurrency" "$calibration"
@@ -887,7 +903,7 @@ main() {
             echo "Study: $(basename "$study_dir")"
             echo "Exercise: ${exercise_name}"
             echo "Config: $(basename "$config")"
-            estimate_time "$ex_persona_count" 1 "$concurrency"
+            estimate_time "$ex_persona_count" 1 "$concurrency" "$output_dir"
             echo ""
 
             if [ "$runs" -gt 1 ]; then
@@ -1117,7 +1133,7 @@ Write the comparison to: ${compare_output}" \
             echo "║  FACET STUDY                                   ║"
             echo "║  Exercises: ${exercise_count}, Personas: $((segments * per_segment))                   ║"
             echo "╚═══════════════════════════════════════════════╝"
-            estimate_time "$((segments * per_segment))" "$exercise_count" "$concurrency"
+            estimate_time "$((segments * per_segment))" "$exercise_count" "$concurrency" "$output_dir"
             echo ""
 
             # Phase 1: Init (skip if personas already exist)
