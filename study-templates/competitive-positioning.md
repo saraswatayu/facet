@@ -1,7 +1,7 @@
 ---
 segments: 6
 personas_per_segment: 5
-exercises:
+studies:
   - config: studies/positioning-variants.md
   - config: studies/feature-differentiation.md
 ---
@@ -28,7 +28,7 @@ Answer: "Where do we fit?" Test positioning/messaging variants and feature diffe
 ### studies/positioning-variants.md
 ```yaml
 ---
-exercise_name: positioning-variants
+study_name: positioning-variants
 study_type: copy
 options:
   - name: "[Positioning A, e.g., Speed]"
@@ -44,7 +44,7 @@ options:
 ### studies/feature-differentiation.md
 ```yaml
 ---
-exercise_name: feature-differentiation
+study_name: feature-differentiation
 study_type: features
 options:
   - name: "[Your Unique Feature]"

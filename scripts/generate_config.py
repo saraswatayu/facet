@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Facet study and exercise configs from structured conversation data.
+"""Generate Facet panel and study configs from structured conversation data.
 
 Reads JSON from stdin describing a product and research question.
 Produces valid YAML-frontmatter markdown configs that parse_config.py accepts.
@@ -77,15 +77,15 @@ def match_study_type(question):
 
 # --- Config generation ---
 
-def generate_exercise_config(data, output_dir):
-    """Generate a single exercise config file."""
+def generate_study_config_file(data, output_dir):
+    """Generate a single study config file."""
     study_type = data.get('study_type') or match_study_type(data.get('research_question', ''))
-    exercise_name = data.get('exercise_name') or f"{data['product_name'].lower().replace(' ', '-')}-{study_type}"
+    study_name_val = data.get('study_name') or f"{data['product_name'].lower().replace(' ', '-')}-{study_type}"
     options = data.get('options', [])
 
     # Build YAML frontmatter (use yaml.dump to handle quoting/escaping)
     frontmatter = {
-        'exercise_name': exercise_name,
+        'study_name': study_name_val,
         'study_type': study_type,
         'options': [{'name': opt['name'], 'description': opt['description']} for opt in options],
     }
@@ -104,10 +104,10 @@ def generate_exercise_config(data, output_dir):
         lines.append('')
 
     content = '\n'.join(lines)
-    filepath = os.path.join(output_dir, f'{exercise_name}.md')
+    filepath = os.path.join(output_dir, f'{study_name_val}.md')
     with open(filepath, 'w') as f:
         f.write(content)
-    return filepath, exercise_name
+    return filepath, study_name_val
 
 
 def auto_scale(data):
@@ -118,9 +118,9 @@ def auto_scale(data):
     - 20-30 is the sweet spot; diminishing returns above 30
     - Beyond ~50 is wasted (errors are systematic, not sample-size)
 
-    Quick check (2 options, single exercise):      4 segments × 3 = 12 personas
-    Standard study (2-4 options, single exercise):  5 segments × 5 = 25 personas
-    Deep study (multi-exercise or 5+ options):      6 segments × 8 = 48 personas
+    Quick check (2 options, single study):      4 segments × 3 = 12 personas
+    Standard study (2-4 options):              5 segments × 5 = 25 personas
+    Deep study (multi-study or 5+ options):    6 segments × 8 = 48 personas
     """
     num_options = len(data.get('options', []))
     question = data.get('research_question', '').lower()
@@ -129,8 +129,8 @@ def auto_scale(data):
     if any(word in question for word in ['quick', 'fast', 'rough', 'sanity check']):
         return 4, 3
 
-    # Multi-exercise or lifecycle study
-    if data.get('exercises') or any(word in question for word in ['full audit', 'lifecycle', 'comprehensive']):
+    # Multi-study or lifecycle
+    if data.get('studies') or any(word in question for word in ['full audit', 'lifecycle', 'comprehensive']):
         return 6, 8
 
     # Many options = deeper study
@@ -145,8 +145,8 @@ def auto_scale(data):
     return 5, 5
 
 
-def generate_study_config(data, exercise_paths, output_dir):
-    """Generate a study config that references exercise configs."""
+def generate_run_config(data, study_paths, output_dir):
+    """Generate a full-run config that references study configs."""
     product_name = data['product_name']
 
     # Auto-scale if user didn't specify
@@ -169,7 +169,7 @@ def generate_study_config(data, exercise_paths, output_dir):
     }
     if calibration_context:
         frontmatter['calibration'] = '.facet/calibration.md'
-    frontmatter['exercises'] = [{'config': path} for path in exercise_paths]
+    frontmatter['studies'] = [{'config': path} for path in study_paths]
 
     lines = ['---']
     lines.append(yaml.dump(frontmatter, default_flow_style=False, sort_keys=False).rstrip())
@@ -221,19 +221,19 @@ def validate_config(filepath, config_type):
     frontmatter, body = parse_frontmatter(filepath)
     errors = []
 
-    if config_type == 'study':
+    if config_type == 'run':
         for field in ('segments', 'personas_per_segment'):
             if field not in frontmatter:
                 errors.append(f'Missing required field: {field}')
             elif not isinstance(frontmatter[field], int) or frontmatter[field] <= 0:
                 errors.append(f'Field {field} must be a positive integer, got: {frontmatter[field]}')
-        if 'exercises' not in frontmatter:
-            errors.append('Missing required field: exercises')
+        if 'studies' not in frontmatter:
+            errors.append('Missing required field: studies')
         if not body.strip():
             errors.append('Missing product description body')
 
-    elif config_type == 'exercise':
-        for field in ('exercise_name', 'study_type', 'options'):
+    elif config_type == 'study':
+        for field in ('study_name', 'study_type', 'options'):
             if field not in frontmatter:
                 errors.append(f'Missing required field: {field}')
         if 'options' in frontmatter:
@@ -290,22 +290,9 @@ def main():
     if data.get('calibration_context'):
         generate_calibration_file(data['calibration_context'], output_dir)
 
-    # Generate exercise config(s)
-    exercise_paths = []
-    exercise_filepath, exercise_name = generate_exercise_config(data, output_dir)
-
-    # Validate exercise config
-    errors = validate_config(exercise_filepath, 'exercise')
-    if errors:
-        print(f'Exercise config validation failed:', file=sys.stderr)
-        for err in errors:
-            print(f'  - {err}', file=sys.stderr)
-        sys.exit(1)
-
-    exercise_paths.append(exercise_filepath)
-
-    # Generate study config
-    study_filepath = generate_study_config(data, exercise_paths, output_dir)
+    # Generate study config(s)
+    study_paths = []
+    study_filepath, study_name_val = generate_study_config_file(data, output_dir)
 
     # Validate study config
     errors = validate_config(study_filepath, 'study')
@@ -315,8 +302,21 @@ def main():
             print(f'  - {err}', file=sys.stderr)
         sys.exit(1)
 
-    # Print the study config path to stdout
-    print(study_filepath)
+    study_paths.append(study_filepath)
+
+    # Generate full-run config
+    run_filepath = generate_run_config(data, study_paths, output_dir)
+
+    # Validate run config
+    errors = validate_config(run_filepath, 'run')
+    if errors:
+        print(f'Run config validation failed:', file=sys.stderr)
+        for err in errors:
+            print(f'  - {err}', file=sys.stderr)
+        sys.exit(1)
+
+    # Print the run config path to stdout
+    print(run_filepath)
 
 
 if __name__ == '__main__':

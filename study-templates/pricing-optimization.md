@@ -1,7 +1,7 @@
 ---
 segments: 8
 personas_per_segment: 5
-exercises:
+studies:
   - config: studies/pricing-models.md
 ---
 
@@ -27,7 +27,7 @@ Answer: "How should we price this?" Deep-dive into 2-3 pricing models with a lar
 ### studies/pricing-models.md
 ```yaml
 ---
-exercise_name: pricing-models
+study_name: pricing-models
 study_type: pricing
 options:
   - name: "[Model A, e.g., Flat Monthly]"

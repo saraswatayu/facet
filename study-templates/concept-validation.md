@@ -1,7 +1,7 @@
 ---
 segments: 6
 personas_per_segment: 5
-exercises:
+studies:
   - config: studies/concept-reactions.md
   - config: studies/feature-importance.md
   - config: studies/pricing-sensitivity.md
@@ -29,7 +29,7 @@ Answer: "Should we launch this?" Test concept reactions, feature importance, and
 ### studies/concept-reactions.md
 ```yaml
 ---
-exercise_name: concept-reactions
+study_name: concept-reactions
 study_type: custom
 options:
   - name: "Core Product"
@@ -43,7 +43,7 @@ options:
 ### studies/feature-importance.md
 ```yaml
 ---
-exercise_name: feature-importance
+study_name: feature-importance
 study_type: features
 options:
   - name: "[Feature 1]"
@@ -59,7 +59,7 @@ options:
 ### studies/pricing-sensitivity.md
 ```yaml
 ---
-exercise_name: pricing-sensitivity
+study_name: pricing-sensitivity
 study_type: pricing
 options:
   - name: "[Pricing Model A]"

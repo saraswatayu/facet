@@ -1,7 +1,7 @@
 ---
 segments: 6
 personas_per_segment: 5
-exercises:
+studies:
   - config: studies/onboarding-flows.md
   - config: studies/feature-discovery.md
 ---
@@ -29,7 +29,7 @@ Answer: "How should we onboard users?" Test 2-3 onboarding flows and feature dis
 ### studies/onboarding-flows.md
 ```yaml
 ---
-exercise_name: onboarding-flows
+study_name: onboarding-flows
 study_type: onboarding
 options:
   - name: "[Flow A]"
@@ -45,7 +45,7 @@ options:
 ### studies/feature-discovery.md
 ```yaml
 ---
-exercise_name: feature-discovery
+study_name: feature-discovery
 study_type: features
 options:
   - name: "[Core Feature]"

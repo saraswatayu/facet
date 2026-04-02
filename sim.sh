@@ -467,7 +467,7 @@ run_simulate() {
     local logs_dir="${6:-${study_dir}/logs}"
 
     local study_name study_type
-    study_name=$(parse_frontmatter "$study_config" "exercise_name")
+    study_name=$(parse_frontmatter "$study_config" "study_name")
     study_type=$(parse_frontmatter "$study_config" "study_type")
 
     mkdir -p "$simulations_dir"
@@ -1046,7 +1046,7 @@ main() {
             fi
 
             local study_name
-            study_name=$(parse_frontmatter "$config" "exercise_name")
+            study_name=$(parse_frontmatter "$config" "study_name")
             if [ -z "$study_name" ]; then
                 # Fallback: try study_name key, then derive from config filename
                 study_name=$(parse_frontmatter "$config" "study_name" 2>/dev/null || true)
@@ -1250,9 +1250,9 @@ Write the comparison to: ${compare_output}" \
 
             # Get study list from config
             local study_configs
-            study_configs=$(python3 "${SCRIPT_DIR}/parse_config.py" "$config" "exercises" --list)
+            study_configs=$(python3 "${SCRIPT_DIR}/parse_config.py" "$config" "studies" --list)
             if [ -z "$study_configs" ]; then
-                echo "ERROR: Study config must have 'exercises' array in frontmatter."
+                echo "ERROR: Run config must have 'studies' array in frontmatter."
                 exit 1
             fi
 
@@ -1343,7 +1343,7 @@ Write the comparison to: ${compare_output}" \
                 fi
 
                 local ex_name
-                ex_name=$(parse_frontmatter "$study_config_path" "exercise_name")
+                ex_name=$(parse_frontmatter "$study_config_path" "study_name")
                 [ -z "$ex_name" ] && ex_name=$(basename "$study_config_path" .md)
 
                 local ex_dir="${panel_dir}/studies/${ex_name}"

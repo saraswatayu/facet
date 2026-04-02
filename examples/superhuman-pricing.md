@@ -1,5 +1,5 @@
 ---
-exercise_name: pricing-tiers
+study_name: pricing-tiers
 study_type: pricing
 options:
   - name: "Model A"

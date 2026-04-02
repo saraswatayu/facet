@@ -1,7 +1,7 @@
 ---
 segments: 8
 personas_per_segment: 5
-exercises:
+studies:
   - config: studies/onboarding.md
   - config: studies/features.md
   - config: studies/pricing.md
@@ -32,7 +32,7 @@ Full product audit. Test onboarding, feature importance, pricing, and retention 
 ### studies/onboarding.md
 ```yaml
 ---
-exercise_name: onboarding
+study_name: onboarding
 study_type: onboarding
 options:
   - name: "[Flow A]"
@@ -46,7 +46,7 @@ options:
 ### studies/features.md
 ```yaml
 ---
-exercise_name: features
+study_name: features
 study_type: features
 options:
   - name: "[Feature 1]"
@@ -62,7 +62,7 @@ options:
 ### studies/pricing.md
 ```yaml
 ---
-exercise_name: pricing
+study_name: pricing
 study_type: pricing
 options:
   - name: "[Model A]"
@@ -76,7 +76,7 @@ options:
 ### studies/retention.md
 ```yaml
 ---
-exercise_name: retention
+study_name: retention
 study_type: retention
 options:
   - name: "[Strategy A]"

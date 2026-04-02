@@ -1,5 +1,5 @@
 ---
-exercise_name: feature-prioritization
+study_name: feature-prioritization
 study_type: features
 options:
   - name: "AI Auto-Reply"
