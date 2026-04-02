@@ -19,7 +19,7 @@ class TestAutoScale(unittest.TestCase):
     def test_quick_check(self):
         data = {'research_question': 'Quick sanity check on pricing', 'options': [{'name': 'A'}, {'name': 'B'}]}
         segments, pps = auto_scale(data)
-        self.assertEqual(segments, 3)
+        self.assertEqual(segments, 4)
         self.assertEqual(pps, 3)
 
     def test_standard_ab(self):

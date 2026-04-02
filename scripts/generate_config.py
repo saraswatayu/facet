@@ -88,16 +88,21 @@ def generate_exercise_config(data, output_dir):
 def auto_scale(data):
     """Pick segment/persona counts based on study complexity.
 
-    Quick check (2 options, single exercise):     3 segments × 3 = 9 personas
-    Standard study (2-4 options, single exercise): 5 segments × 5 = 25 personas
-    Deep study (multi-exercise or 5+ options):     6 segments × 8 = 48 personas
+    Research basis (validation-and-failure-modes.md, Section 6):
+    - Below ~12 personas risks missing segments entirely
+    - 20-30 is the sweet spot; diminishing returns above 30
+    - Beyond ~50 is wasted (errors are systematic, not sample-size)
+
+    Quick check (2 options, single exercise):      4 segments × 3 = 12 personas
+    Standard study (2-4 options, single exercise):  5 segments × 5 = 25 personas
+    Deep study (multi-exercise or 5+ options):      6 segments × 8 = 48 personas
     """
     num_options = len(data.get('options', []))
     question = data.get('research_question', '').lower()
 
     # User explicitly asked for quick/fast
     if any(word in question for word in ['quick', 'fast', 'rough', 'sanity check']):
-        return 3, 3
+        return 4, 3
 
     # Multi-exercise or lifecycle study
     if data.get('exercises') or any(word in question for word in ['full audit', 'lifecycle', 'comprehensive']):
