@@ -202,6 +202,7 @@ class TestCLIEntrypoint(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, f'stderr: {result.stderr}')
         self.assertTrue(result.stdout.strip().endswith('.md'))
+        self.assertTrue(result.stdout.strip().endswith('clitest-pricing.md'))
 
     def test_invalid_json_exits_nonzero(self):
         result = subprocess.run(

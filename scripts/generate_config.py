@@ -315,8 +315,9 @@ def main():
             print(f'  - {err}', file=sys.stderr)
         sys.exit(1)
 
-    # Print the run config path to stdout
-    print(run_filepath)
+    # Print the study config path to stdout; the skill flow passes this path to
+    # `sim.sh init` and `sim.sh study` phase-by-phase.
+    print(study_filepath)
 
 
 if __name__ == '__main__':
