@@ -77,12 +77,17 @@ Personas are generated once and reused across exercises. A pricing exercise and 
 | `--calibration` | Real research data to ground personas ([details](#calibration)) | — |
 | `--output-dir` | Override base output directory | `./output/` |
 
-### Claude Code Skill
+### Claude Code Plugin
 
-If you use Claude Code, install Facet as a skill for a conversational experience:
+If you use Claude Code, install Facet as a plugin for a conversational research experience:
 
 ```bash
+# As a skill (personal, available in all projects)
 git clone https://github.com/saraswatayu/facet.git ~/.claude/skills/facet
+
+# Or as a plugin (for development/testing)
+git clone https://github.com/saraswatayu/facet.git
+claude --plugin-dir ./facet
 ```
 
 Then ask a product question:
@@ -91,7 +96,9 @@ Then ask a product question:
 /facet "Should I charge $15 or $30/month for my task management app?"
 ```
 
-The skill scans your codebase for relevant data, asks 2-3 calibration questions, generates a study config, runs the simulation, and delivers findings with a research panel introduction and honest confidence levels. No config files to write.
+The skill scans your codebase for pricing and feature data, asks 2-3 calibration questions, generates a study config, and delegates to a background research agent that runs the full simulation while you keep working. When it finishes: a research panel introduction, findings with honest confidence levels, and follow-up options.
+
+You can also invoke the research agent directly: `@facet-researcher run a pricing study for this product`. The agent has persistent memory and remembers past studies across sessions.
 
 ---
 
