@@ -5,7 +5,7 @@ Reads JSON from stdin describing a product and research question.
 Produces valid YAML-frontmatter markdown configs that parse_config.py accepts.
 
 Usage:
-    echo '{"product_name": "TaskFlow", ...}' | python3 generate-config.py [--output-dir /path]
+    echo '{"product_name": "TaskFlow", ...}' | python3 generate_config.py [--output-dir /path]
 
 Prints the study config path to stdout on success. Exit 1 on validation failure.
 """
@@ -14,7 +14,6 @@ import json
 import os
 import sys
 import tempfile
-import hashlib
 
 # Add parent directory to path so we can import parse_config
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -218,11 +217,6 @@ def validate_config(filepath, config_type):
 
     return errors
 
-
-def config_hash(filepath):
-    """Compute a short hash of a config file for memory tracking."""
-    with open(filepath, 'rb') as f:
-        return hashlib.md5(f.read()).hexdigest()[:8]
 
 
 # --- Main ---

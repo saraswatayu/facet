@@ -82,7 +82,7 @@ Construct JSON input for generate_config.py with:
 - study_type (matched or user-chosen)
 - options (from scan data + user descriptions)
 - segments and personas_per_segment (auto-scaled by generate_config.py based on
-  question complexity: 9 personas for quick checks, 25 for standard, 48 for deep studies.
+  question complexity: 12 personas for quick checks, 25 for standard, 48 for deep studies.
   Only override if the user explicitly requests a specific count.)
 - calibration_context (from interview)
 - codebase_data (from scan, if any)

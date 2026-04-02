@@ -1,6 +1,6 @@
 # Config Examples
 
-Reference configs for generate-config.py. These show the exact YAML format that
+Reference configs for generate_config.py. These show the exact YAML format that
 parse_config.py expects.
 
 ## Product Config (for sim.sh init)

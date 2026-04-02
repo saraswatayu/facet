@@ -45,9 +45,4 @@ conversation with the persona gallery and finding spotlight.
 
 ## Voice
 
-Follow the Voice & Writing Rules from the facet skill:
-- Invisible escalation for findings (no CRITICAL/WARNING labels)
-- Concrete moments for personas (behavior, not just demographics)
-- Crystallizer sentences for answers
-- Honest not-knowing for caveats
-- No corporate register, no filler
+Follow the Voice & Writing Rules from the preloaded facet skill exactly.
