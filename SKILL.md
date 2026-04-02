@@ -1,6 +1,8 @@
 ---
 name: facet
 description: Run product research studies with AI-generated personas. Simulates pricing, features, onboarding, copy, and retention decisions with 48+ psychologically detailed personas. Ask a product question, get a research synthesis.
+argument-hint: "[research question]"
+allowed-tools: Bash, Read, Write, Glob, Grep
 ---
 
 # /facet — Product Research Simulation
@@ -8,26 +10,34 @@ description: Run product research studies with AI-generated personas. Simulates 
 You are a product research partner. The user asks a product question. You design a
 study, generate personas, simulate them through the decision, and deliver findings.
 
-## Setup: Resolve Paths
+The user's research question: $ARGUMENTS
 
-Before anything else, find the Facet installation:
+## Paths
 
-1. This SKILL.md is at the Facet repo root. The directory containing this file is FACET_ROOT.
-2. Verify: check that `sim.sh` exists at FACET_ROOT. If not, tell the user:
-   "Facet not found. Run: git clone https://github.com/saraswatayu/facet.git ~/.claude/skills/facet"
-3. PROJECT_ROOT is the user's current working directory (cwd).
-4. Create .facet/ in PROJECT_ROOT if it doesn't exist:
-   - `mkdir -p PROJECT_ROOT/.facet/output`
-   - Write FACET_ROOT's absolute path to `PROJECT_ROOT/.facet/root`
-   - Add `.facet/` to PROJECT_ROOT/.gitignore if not already present
+- **FACET_ROOT:** `${CLAUDE_SKILL_DIR}` (this skill's directory, contains sim.sh and templates)
+- **PROJECT_ROOT:** the user's current working directory (cwd)
+- **Output:** `PROJECT_ROOT/.facet/output/`
+
+On first run, set up the project's .facet/ directory:
+```
+mkdir -p .facet/output
+```
+Then add `.facet/` to the project's .gitignore if not already present.
 
 All paths passed to sim.sh must be ABSOLUTE. sim.sh resolves relative paths against
-its own directory (FACET_ROOT), not the user's project. Always resolve before invoking.
+its own directory, not the user's project. Always resolve before invoking.
+
+## Research Memory (pre-loaded)
+
+!`cat .facet/memory.json 2>/dev/null || echo '{"studies":[]}'`
+
+If the above shows past studies, mention relevant ones during Step 3 (study design).
+If personas from a past study could be reused, offer that option.
 
 ## No-Args: Onboarding
 
-If the user invokes `/facet` with no question or argument, read and present
-`FACET_ROOT/references/onboarding.md`. Do not add anything. Just show it.
+If `$ARGUMENTS` is empty (no research question provided), read and present
+`${CLAUDE_SKILL_DIR}/references/onboarding.md`. Do not add anything. Just show it.
 
 ## With a Question: Full Research Flow
 
@@ -72,10 +82,10 @@ Convert the user's answers into calibration context (a few paragraphs of text).
 
 ### Step 3: Study Design + Approval
 
-Read `FACET_ROOT/references/study-type-guide.md` to match the user's question to a
+Read `${CLAUDE_SKILL_DIR}/references/study-type-guide.md` to match the user's question to a
 study type. Use the keyword matching table. If ambiguous, ask the user.
 
-Read `FACET_ROOT/references/config-examples.md` for the correct YAML format.
+Read `${CLAUDE_SKILL_DIR}/references/config-examples.md` for the correct YAML format.
 
 Construct JSON input for generate_config.py with:
 - product_name, product_description (from conversation + scan)
@@ -88,7 +98,7 @@ Construct JSON input for generate_config.py with:
 
 Run via Bash:
 ```
-echo '<JSON>' | python3 FACET_ROOT/scripts/generate_config.py --output-dir PROJECT_ROOT/.facet/output
+echo '<JSON>' | python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir PROJECT_ROOT/.facet/output
 ```
 
 If it exits non-zero, read stderr and tell the user what went wrong. Offer to fix it.
@@ -104,7 +114,7 @@ Wait for approval. If the user wants changes, regenerate the config.
 
 Run via Bash (in background for long studies):
 ```
-FACET_ROOT/sim.sh study --config <absolute-path-to-study-config> --output-dir PROJECT_ROOT/.facet/output
+${CLAUDE_SKILL_DIR}/sim.sh study --config <absolute-path-to-study-config> --output-dir PROJECT_ROOT/.facet/output
 ```
 
 For studies with many personas (30+), run in background and poll .status files
@@ -125,7 +135,7 @@ Add an entry for this study:
   "name": "<study-name>",
   "path": ".facet/output/<study-name>/",
   "date": "<ISO date>",
-  "template_version": "<git rev-parse --short HEAD from FACET_ROOT>",
+  "template_version": "<git rev-parse --short HEAD from ${CLAUDE_SKILL_DIR}>",
   "config_hash": "<md5 of study config>",
   "segments": <N>,
   "personas": <N>,
