@@ -3,12 +3,13 @@ set -euo pipefail
 
 # Facet v2 — Pre-Launch Simulation Engine
 # Usage:
-#   ./sim.sh init   --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md] [--output-dir /path/to/output]
+#   ./sim.sh init   --config examples/superhuman-product.md [--name superhuman] [--concurrency 5] [--calibration data.md]
+#   ./sim.sh init   --config config.md --panel .facet/     # use an existing directory as the panel root
 #   ./sim.sh study  --panel output/superhuman/ --config examples/superhuman-pricing.md [--concurrency 5]
 #   ./sim.sh status --panel output/superhuman/
 #
-# --output-dir: override base output directory (default: ./output/). Used by /facet skill
-#               to write study output to the user's project instead of the Facet install dir.
+# --output-dir: override base output directory (default: ./output/). Derives panel name from config.
+# --panel:      use a specific directory as the panel root (skips name derivation).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 STREAM_FILTER="python3 -u ${SCRIPT_DIR}/stream_filter.py"
@@ -1472,11 +1473,11 @@ Write the comparison to: ${compare_output}" \
             echo "Facet v2 — Pre-Launch Simulation Engine"
             echo ""
             echo "Usage:"
-            echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
+            echo "  ./sim.sh init        --config <product-config> [--name <name>] [--panel <dir>] [--concurrency N] [--calibration <file>]"
             echo "  ./sim.sh study       --panel <dir> --config <study-config> [--concurrency N] [--runs N]"
             echo "  ./sim.sh synthesize  --panel <dir>"
             echo "  ./sim.sh compare     --panel <dir1> --compare-to <dir2>"
-            echo "  ./sim.sh run         --config <full-study-config> [--name <name>] [--concurrency N] [--continue-on-error]"
+            echo "  ./sim.sh run         --config <full-study-config> [--name <name>] [--panel <dir>] [--concurrency N] [--continue-on-error]"
             echo "  ./sim.sh status      --panel <dir>"
             echo ""
             echo "Commands:"
