@@ -118,7 +118,7 @@ class TestConfigGeneration(unittest.TestCase):
         errors = validate_config(filepath, 'study')
         self.assertEqual(errors, [])
 
-    def test_study_config_valid(self):
+    def test_run_config_valid(self):
         data = self._base_data()
         ex_path, _ = generate_study_config_file(data, self.output_dir)
         study_path = generate_run_config(data, [ex_path], self.output_dir)
@@ -126,7 +126,7 @@ class TestConfigGeneration(unittest.TestCase):
         errors = validate_config(study_path, 'run')
         self.assertEqual(errors, [])
 
-    def test_study_config_has_required_fields(self):
+    def test_run_config_has_required_fields(self):
         data = self._base_data()
         ex_path, _ = generate_study_config_file(data, self.output_dir)
         study_path = generate_run_config(data, [ex_path], self.output_dir)
