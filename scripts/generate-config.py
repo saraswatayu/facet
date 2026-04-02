@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""Generate Facet study and exercise configs from structured conversation data.
+
+Reads JSON from stdin describing a product and research question.
+Produces valid YAML-frontmatter markdown configs that parse_config.py accepts.
+
+Usage:
+    echo '{"product_name": "TaskFlow", ...}' | python3 generate-config.py [--output-dir /path]
+
+Prints the study config path to stdout on success. Exit 1 on validation failure.
+"""
+
+import json
+import os
+import sys
+import tempfile
+import hashlib
+
+# Add parent directory to path so we can import parse_config
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from parse_config import parse_frontmatter
+
+
+# --- Study type matching ---
+
+STUDY_TYPE_KEYWORDS = {
+    'pricing': ['price', 'charge', 'cost', 'tier', 'plan', 'subscription', 'pay',
+                'afford', 'freemium', 'free tier', 'annual', 'monthly'],
+    'copy': ['copy', 'messaging', 'headline', 'positioning', 'tagline', 'slogan',
+             'brand voice', 'landing page', 'variant'],
+    'features': ['feature', 'should we build', 'worth adding', 'capability',
+                 'functionality', 'prioritize', 'roadmap'],
+    'onboarding': ['onboarding', 'activation', 'first-time', 'signup',
+                   'getting started', 'tutorial', 'welcome'],
+    'retention': ['retain', 'churn', 'keep users', 'engagement', 'loyalty',
+                  'cancel', 'renew', 'subscription fatigue'],
+}
+
+
+def match_study_type(question):
+    """Match a natural language question to a study type via keyword heuristics."""
+    question_lower = question.lower()
+    scores = {}
+    for study_type, keywords in STUDY_TYPE_KEYWORDS.items():
+        score = sum(1 for kw in keywords if kw in question_lower)
+        if score > 0:
+            scores[study_type] = score
+    if not scores:
+        return 'custom'
+    return max(scores, key=scores.get)
+
+
+# --- Config generation ---
+
+def generate_exercise_config(data, output_dir):
+    """Generate a single exercise config file."""
+    study_type = data.get('study_type') or match_study_type(data.get('research_question', ''))
+    exercise_name = data.get('exercise_name') or f"{data['product_name'].lower().replace(' ', '-')}-{study_type}"
+    options = data.get('options', [])
+
+    # Build YAML frontmatter
+    lines = ['---']
+    lines.append(f'exercise_name: {exercise_name}')
+    lines.append(f'study_type: {study_type}')
+    lines.append('options:')
+    for opt in options:
+        lines.append(f'  - name: "{opt["name"]}"')
+        lines.append(f'    description: "{opt["description"]}"')
+    lines.append('---')
+    lines.append('')
+
+    # Build body
+    lines.append('## Options to Test')
+    lines.append('')
+    for opt in options:
+        lines.append(f'### {opt["name"]}')
+        lines.append('')
+        lines.append(opt.get('details', opt['description']))
+        lines.append('')
+
+    content = '\n'.join(lines)
+    filepath = os.path.join(output_dir, f'{exercise_name}.md')
+    with open(filepath, 'w') as f:
+        f.write(content)
+    return filepath, exercise_name
+
+
+def generate_study_config(data, exercise_paths, output_dir):
+    """Generate a study config that references exercise configs."""
+    product_name = data['product_name']
+    segments = data.get('segments', 6)
+    personas_per_segment = data.get('personas_per_segment', 8)
+    description = data.get('product_description', f'{product_name} product.')
+    calibration_context = data.get('calibration_context', '')
+    codebase_data = data.get('codebase_data', {})
+
+    # Build YAML frontmatter
+    lines = ['---']
+    lines.append(f'segments: {segments}')
+    lines.append(f'personas_per_segment: {personas_per_segment}')
+    if calibration_context:
+        lines.append(f'calibration: .facet/calibration.md')
+    lines.append('exercises:')
+    for path in exercise_paths:
+        lines.append(f'  - config: {path}')
+    lines.append('---')
+    lines.append('')
+
+    # Build body (product description)
+    lines.append(f'# Product: {product_name}')
+    lines.append('')
+
+    # Truncate long descriptions to ~500 words
+    words = description.split()
+    if len(words) > 500:
+        description = ' '.join(words[:500]) + '...'
+
+    lines.append(description)
+    lines.append('')
+
+    # Add codebase context if available
+    if codebase_data:
+        lines.append('## Data from Codebase')
+        lines.append('')
+        for key, value in codebase_data.items():
+            lines.append(f'- {key}: {value}')
+        lines.append('')
+
+    content = '\n'.join(lines)
+    study_name = product_name.lower().replace(' ', '-')
+    filepath = os.path.join(output_dir, f'{study_name}-study.md')
+    with open(filepath, 'w') as f:
+        f.write(content)
+    return filepath
+
+
+def generate_calibration_file(calibration_context, output_dir):
+    """Write calibration context from conversation to a file."""
+    filepath = os.path.join(output_dir, 'calibration.md')
+    with open(filepath, 'w') as f:
+        f.write('# Calibration Context\n\n')
+        f.write('From user interview during /facet skill invocation.\n\n')
+        f.write(calibration_context)
+        f.write('\n')
+    return filepath
+
+
+# --- Validation ---
+
+def validate_config(filepath, config_type):
+    """Validate a generated config using parse_config.py's parser."""
+    frontmatter, body = parse_frontmatter(filepath)
+    errors = []
+
+    if config_type == 'study':
+        for field in ('segments', 'personas_per_segment'):
+            if field not in frontmatter:
+                errors.append(f'Missing required field: {field}')
+            elif not isinstance(frontmatter[field], int) or frontmatter[field] <= 0:
+                errors.append(f'Field {field} must be a positive integer, got: {frontmatter[field]}')
+        if 'exercises' not in frontmatter:
+            errors.append('Missing required field: exercises')
+        if not body.strip():
+            errors.append('Missing product description body')
+
+    elif config_type == 'exercise':
+        for field in ('exercise_name', 'study_type', 'options'):
+            if field not in frontmatter:
+                errors.append(f'Missing required field: {field}')
+        if 'options' in frontmatter:
+            opts = frontmatter['options']
+            if not isinstance(opts, list) or len(opts) == 0:
+                errors.append('Options must be a non-empty list')
+            else:
+                for i, opt in enumerate(opts):
+                    if not isinstance(opt, dict):
+                        errors.append(f'Option {i} must be a dict with name and description')
+                    elif 'name' not in opt or 'description' not in opt:
+                        errors.append(f'Option {i} missing name or description')
+
+    return errors
+
+
+def config_hash(filepath):
+    """Compute a short hash of a config file for memory tracking."""
+    with open(filepath, 'rb') as f:
+        return hashlib.md5(f.read()).hexdigest()[:8]
+
+
+# --- Main ---
+
+def main():
+    output_dir = None
+    args = sys.argv[1:]
+    i = 0
+    while i < len(args):
+        if args[i] == '--output-dir' and i + 1 < len(args):
+            output_dir = args[i + 1]
+            i += 2
+        else:
+            print(f'Unknown argument: {args[i]}', file=sys.stderr)
+            sys.exit(1)
+
+    if output_dir is None:
+        output_dir = tempfile.mkdtemp(prefix='facet-config-')
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Read JSON from stdin
+    try:
+        data = json.load(sys.stdin)
+    except json.JSONDecodeError as e:
+        print(f'Invalid JSON input: {e}', file=sys.stderr)
+        sys.exit(1)
+
+    # Validate required fields
+    if 'product_name' not in data:
+        print('Missing required field: product_name', file=sys.stderr)
+        sys.exit(1)
+
+    # Auto-detect study type if not provided
+    if 'study_type' not in data and 'research_question' in data:
+        data['study_type'] = match_study_type(data['research_question'])
+
+    # Generate calibration file if context provided
+    if data.get('calibration_context'):
+        generate_calibration_file(data['calibration_context'], output_dir)
+
+    # Generate exercise config(s)
+    exercise_paths = []
+    exercise_filepath, exercise_name = generate_exercise_config(data, output_dir)
+
+    # Validate exercise config
+    errors = validate_config(exercise_filepath, 'exercise')
+    if errors:
+        print(f'Exercise config validation failed:', file=sys.stderr)
+        for err in errors:
+            print(f'  - {err}', file=sys.stderr)
+        sys.exit(1)
+
+    exercise_paths.append(exercise_filepath)
+
+    # Generate study config
+    study_filepath = generate_study_config(data, exercise_paths, output_dir)
+
+    # Validate study config
+    errors = validate_config(study_filepath, 'study')
+    if errors:
+        print(f'Study config validation failed:', file=sys.stderr)
+        for err in errors:
+            print(f'  - {err}', file=sys.stderr)
+        sys.exit(1)
+
+    # Print the study config path to stdout
+    print(study_filepath)
+
+
+if __name__ == '__main__':
+    main()
