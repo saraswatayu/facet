@@ -576,11 +576,31 @@ show_status() {
                 fi
                 local has_synthesis="no"
                 [ -f "${exercise}/synthesis.md" ] && has_synthesis="yes"
-                echo "  ${ename}: ${sim_count} simulations, synthesis: ${has_synthesis}"
+                local has_artifacts="no"
+                [ -f "${exercise}/artifacts.md" ] && has_artifacts="yes"
+                echo "  ${ename}: ${sim_count} simulations, synthesis: ${has_synthesis}, artifacts: ${has_artifacts}"
             fi
         done
     else
         echo "Exercises: none"
+    fi
+
+    # Cross-synthesis status
+    if [ -f "${study_dir}/cross-synthesis.md" ]; then
+        local cs_lines
+        cs_lines=$(wc -l < "${study_dir}/cross-synthesis.md" | tr -d ' ')
+        echo ""
+        echo "Cross-synthesis: yes (${cs_lines} lines)"
+    elif [ -d "${study_dir}/exercises" ]; then
+        local synth_count=0
+        for f in "${study_dir}/exercises"/*/synthesis.md; do
+            [ -f "$f" ] && ((synth_count++)) || true
+        done
+        if [ "$synth_count" -gt 0 ]; then
+            echo ""
+            echo "Cross-synthesis: not yet (${synth_count} exercise syntheses ready)"
+            echo "  Run: ./sim.sh synthesize --study ${study_dir}"
+        fi
     fi
 
     # Phase history
@@ -624,7 +644,7 @@ for line in sys.stdin:
 
     echo ""
     echo "Output files:"
-    for f in plan.md; do
+    for f in plan.md cross-synthesis.md; do
         if [ -f "${study_dir}/$f" ]; then
             local lines
             lines=$(wc -l < "${study_dir}/$f" | tr -d ' ')
