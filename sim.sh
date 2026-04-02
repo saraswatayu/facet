@@ -459,6 +459,83 @@ Write the artifacts to: ${exercise_dir}/artifacts.md" \
     update_status "$exercise_dir" "analyze" "complete"
 }
 
+# --- Phase: Cross-Synthesis (single call — unified analysis across exercises) ---
+run_cross_synthesize() {
+    local study_dir="$1"
+
+    # Discover exercises with completed synthesis
+    local synthesis_files=()
+    for f in "${study_dir}/exercises"/*/synthesis.md; do
+        [ -f "$f" ] && synthesis_files+=("$f")
+    done
+
+    if [ "${#synthesis_files[@]}" -eq 0 ]; then
+        echo "ERROR: No synthesis files found in ${study_dir}/exercises/*/. Run exercises first."
+        exit 1
+    fi
+
+    local exercise_count="${#synthesis_files[@]}"
+
+    # Count personas
+    local persona_count
+    persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
+
+    # Build persona context: summaries if >30, full paths if <=30
+    local persona_instruction
+    if [ "$persona_count" -gt 30 ]; then
+        local summaries=""
+        for pfile in "${study_dir}/personas"/persona-*.md; do
+            [ -f "$pfile" ] || continue
+            summaries="${summaries}
+$(extract_persona_summary "$pfile")"
+        done
+        persona_instruction="Persona summaries (${persona_count} personas):
+${summaries}
+
+For persona arc tracking, use these summaries to identify personas by name and number."
+    else
+        persona_instruction="Read ALL persona background files in: ${study_dir}/personas/
+Use full persona backgrounds for arc tracking."
+    fi
+
+    echo ""
+    echo "╔═══════════════════════════════════════════════╗"
+    echo "║  CROSS-EXERCISE SYNTHESIS                      ║"
+    echo "║  Exercises: ${exercise_count}, Personas: ${persona_count}                    ║"
+    echo "╚═══════════════════════════════════════════════╝"
+    echo ""
+
+    # Version-lock the cross-synthesis template
+    cp "${SCRIPT_DIR}/templates/cross-synthesis.md" "${study_dir}/.templates/" 2>/dev/null || true
+
+    FACET_PHASE="Cross-synthesis: ${exercise_count} exercises" \
+    claude --print --verbose --output-format stream-json \
+        --max-turns 50 \
+        --allowedTools "Read,Write,Glob,Grep" \
+        -p "You are running the Cross-Exercise Synthesis phase of a Facet behavioral simulation study.
+
+Read these files for context:
+1. Cross-synthesis template (follow these instructions): ${study_dir}/.templates/cross-synthesis.md
+
+Then read ALL per-exercise synthesis files:
+$(printf '- %s\n' "${synthesis_files[@]}")
+
+${persona_instruction}
+
+Produce a unified cross-exercise synthesis connecting findings across all ${exercise_count} exercises.
+Write the cross-synthesis to: ${study_dir}/cross-synthesis.md" \
+        2>&1 | $STREAM_FILTER
+
+    if [ ! -s "${study_dir}/cross-synthesis.md" ]; then
+        echo "ERROR: Cross-synthesis was not generated."
+        exit 1
+    fi
+
+    echo ""
+    echo "Cross-synthesis written to ${study_dir}/cross-synthesis.md"
+    update_status "$study_dir" "cross-synthesize" "complete"
+}
+
 # --- Show status ---
 show_status() {
     local study_dir="$1"
@@ -692,6 +769,25 @@ main() {
             echo "  artifacts.md — actionable deliverables"
             echo "  simulations/ — per-persona simulation details"
             ;;
+        synthesize)
+            [ -z "$study_dir" ] && { echo "Usage: ./sim.sh synthesize --study <dir>"; exit 1; }
+
+            if [ ! -d "${study_dir}/exercises" ]; then
+                echo "ERROR: No exercises directory at ${study_dir}/exercises/. Run exercises first."
+                exit 1
+            fi
+
+            echo ""
+            echo "FACET SIMULATION ENGINE v2"
+            echo "Study: $(basename "$study_dir")"
+            echo ""
+
+            run_cross_synthesize "$study_dir"
+
+            echo ""
+            echo "CROSS-SYNTHESIS COMPLETE"
+            echo "Results: ${study_dir}/cross-synthesis.md"
+            ;;
         status)
             [ -z "$study_dir" ] && { echo "Usage: ./sim.sh status --study <dir>"; exit 1; }
             show_status "$study_dir"
@@ -700,14 +796,16 @@ main() {
             echo "Facet v2 — Pre-Launch Simulation Engine"
             echo ""
             echo "Usage:"
-            echo "  ./sim.sh init      --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
-            echo "  ./sim.sh exercise  --study <dir> --config <exercise-config> [--concurrency N]"
-            echo "  ./sim.sh status    --study <dir>"
+            echo "  ./sim.sh init        --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"
+            echo "  ./sim.sh exercise    --study <dir> --config <exercise-config> [--concurrency N]"
+            echo "  ./sim.sh synthesize  --study <dir>"
+            echo "  ./sim.sh status      --study <dir>"
             echo ""
             echo "Commands:"
-            echo "  init      Plan + generate persona backgrounds (parallel)"
-            echo "  exercise  Simulate personas through options (parallel) + analyze"
-            echo "  status    Show study progress and exercise results"
+            echo "  init        Plan + generate persona backgrounds (parallel)"
+            echo "  exercise    Simulate personas through options (parallel) + analyze"
+            echo "  synthesize  Cross-exercise synthesis (unified findings across all exercises)"
+            echo "  status      Show study progress and exercise results"
             echo ""
             echo "Options:"
             echo "  --config      Path to config file (product config for init, exercise config for exercise)"
@@ -723,6 +821,8 @@ main() {
             echo "  4. ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-pricing.md"
             echo "  5. Run more exercises against the same personas:"
             echo "     ./sim.sh exercise --study output/superhuman/ --config examples/superhuman-copy.md"
+            echo "  6. Produce cross-exercise synthesis:"
+            echo "     ./sim.sh synthesize --study output/superhuman/"
             ;;
         *)
             echo "Unknown command: $cmd"
