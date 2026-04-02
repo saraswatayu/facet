@@ -2,7 +2,7 @@
 name: facet
 description: Run product research studies with AI-generated personas. Simulates pricing, features, onboarding, copy, and retention decisions with 48+ psychologically detailed personas. Ask a product question, get a research synthesis.
 argument-hint: "[research question]"
-allowed-tools: Bash, Read, Write, Glob, Grep
+allowed-tools: Bash, Read, Write, Glob, Grep, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: true
 effort: high
 ---
@@ -174,15 +174,24 @@ words than another, tell the user before running.
 
 Ask: "Ready to run?" Wait for confirmation.
 
-## Step 4: Run the Study (phase by phase, with progress)
+## Step 4: Run the Study (phase by phase, with task progress)
 
 Do NOT run `sim.sh study` as one blocking call. Run each phase separately so you
-can report progress between them. Within each phase, run the command in the
-background and poll the filesystem for progress.
+can report progress between them. Use TaskCreate/TaskUpdate to show a structured
+progress tree. Within each phase, run the command in the background and poll the
+filesystem for progress.
+
+**Set up the task tree at the start:**
+
+Create all tasks upfront so the user sees the full pipeline:
+- TaskCreate: "Generate [N] personas ([S] segments x [P] each)"
+- TaskCreate: "Simulate [exercise name]" (one per exercise)
+- TaskCreate: "Analyze findings"
+- TaskCreate: "Cross-exercise synthesis" (only if 2+ exercises)
 
 **Phase 1: Init (generate personas)**
 
-Tell the user: "Generating [N] personas across [S] segments. I'll update you as they come in."
+TaskUpdate the generate task to in_progress.
 
 Run in background:
 ```bash
@@ -201,13 +210,13 @@ wait $INIT_PID
 ```
 
 After each poll, tell the user: "Personas: [done]/[total] generated..."
-When complete: "[N] personas generated. Running simulations."
+When complete: TaskUpdate to completed. "[N] personas generated."
 
 **Phase 2: Exercise (simulate each persona)**
 
 For each exercise config referenced in the study config:
 
-Tell the user: "Simulating [N] personas. Updating as they finish."
+TaskUpdate the simulate task to in_progress.
 
 Run in background:
 ```bash
@@ -226,12 +235,31 @@ wait $EX_PID
 ```
 
 Tell the user progress after each poll: "Simulations: [done]/[total]..."
-When complete: "Simulations done. Analyzing findings."
+When complete: TaskUpdate to completed. "Simulations done."
 
-**Phase 3: Synthesize (if multiple exercises)**
+**Phase 3: Analyze**
+
+TaskUpdate the analyze task to in_progress.
+
+The analysis phase now uses simulation summaries automatically (when >12 personas
+and summary files exist). The sim.sh exercise command already produces both full
+simulation files and summary sidecars.
+
+Run analysis (blocking, includes spot-check verification):
+```bash
+${CLAUDE_SKILL_DIR}/sim.sh exercise --study .facet/output/<study-name> --config <ABSOLUTE_EXERCISE_CONFIG_PATH>
+```
+
+Note: analysis runs as part of the exercise command. When it completes, check for
+verification.md and mention any caveats to the user.
+
+TaskUpdate to completed.
+
+**Phase 4: Synthesize (if multiple exercises)**
 
 If the study has 2+ exercises:
 
+TaskUpdate the synthesis task to in_progress.
 Tell the user: "Synthesizing findings across exercises. ~2 minutes."
 
 ```bash
