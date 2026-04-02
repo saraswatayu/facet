@@ -27,13 +27,6 @@ Then add `.facet/` to the project's .gitignore if not already present.
 All paths passed to sim.sh must be ABSOLUTE. sim.sh resolves relative paths against
 its own directory, not the user's project. Always resolve before invoking.
 
-## Research Memory (pre-loaded)
-
-!`cat .facet/memory.json 2>/dev/null || echo '{"studies":[]}'`
-
-If the above shows past studies, mention relevant ones during Step 3 (study design).
-If personas from a past study could be reused, offer that option.
-
 ## No-Args: Onboarding
 
 If `$ARGUMENTS` is empty (no research question provided), read and present
@@ -98,7 +91,7 @@ Construct JSON input for generate_config.py with:
 
 Run via Bash:
 ```
-echo '<JSON>' | python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir PROJECT_ROOT/.facet/output
+echo '<JSON>' | python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir .facet/output
 ```
 
 If it exits non-zero, read stderr and tell the user what went wrong. Offer to fix it.
@@ -112,48 +105,38 @@ Wait for approval. If the user wants changes, regenerate the config.
 
 ### Step 4: Execution
 
-Run via Bash (in background for long studies):
+Delegate to the `facet-researcher` subagent. It runs in the background with persistent
+memory, so the user can keep working while the study runs.
+
+Pass the subagent all the context it needs:
+- The absolute path to the generated study config
+- The FACET_ROOT path (${CLAUDE_SKILL_DIR})
+- The output directory (.facet/output/)
+- The user's original question
+- Any calibration context from the interview
+
+The subagent will:
+1. Run `sim.sh study` with the config
+2. Read output files when complete
+3. Present the Persona Gallery and Finding Spotlight
+4. Offer the follow-up loop
+5. Update its persistent memory with this study's results
+
+The subagent has the facet skill preloaded and follows the same voice and writing
+rules defined below.
+
+### If Running Without the Subagent (fallback)
+
+If the facet-researcher subagent is not available (e.g., running as a standalone skill
+without the plugin), run sim.sh directly:
+
 ```
-${CLAUDE_SKILL_DIR}/sim.sh study --config <absolute-path-to-study-config> --output-dir PROJECT_ROOT/.facet/output
-```
-
-For studies with many personas (30+), run in background and poll .status files
-every 2-3 minutes to give the user a heartbeat:
-- Read PROJECT_ROOT/.facet/output/{study-name}/.status
-- Report: "Generating personas... 24/48 done."
-- Read exercise .status files for simulation progress
-
-When complete, proceed to Step 5.
-
-### Step 5: Research Memory
-
-After the study completes, read or create PROJECT_ROOT/.facet/memory.json.
-
-Add an entry for this study:
-```json
-{
-  "name": "<study-name>",
-  "path": ".facet/output/<study-name>/",
-  "date": "<ISO date>",
-  "template_version": "<git rev-parse --short HEAD from ${CLAUDE_SKILL_DIR}>",
-  "config_hash": "<md5 of study config>",
-  "segments": <N>,
-  "personas": <N>,
-  "exercises": ["<exercise-names>"],
-  "question": "<user's original question>",
-  "calibration": "<summary of calibration context>"
-}
+${CLAUDE_SKILL_DIR}/sim.sh study --config <absolute-path-to-study-config> --output-dir .facet/output
 ```
 
-If memory.json exists and has a study with matching personas that could be reused,
-mention it at Step 3 (before running): "You have 48 personas from your [date] study.
-Want to reuse them?" If template_version differs from current HEAD, warn:
-"Those personas were generated with an older Facet version. Results may differ."
+Then continue with the Persona Gallery, Finding Spotlight, and Follow-Up Loop below.
 
-If memory.json is corrupted (invalid JSON), reset it with an empty structure and warn
-the user: "Research memory was corrupted. Starting fresh."
-
-### Step 6: Persona Gallery
+### Step 5: Persona Gallery
 
 Read the 5 most interesting persona files from the output directory.
 
@@ -180,7 +163,7 @@ Present each persona with BEHAVIOR, not just demographics:
 
 Full panel: .facet/output/{study}/personas/"
 
-### Step 7: Finding Spotlight
+### Step 6: Finding Spotlight
 
 Read cross-synthesis.md (or synthesis.md if single exercise). Extract the top findings.
 
@@ -199,7 +182,7 @@ the previous one, and the conclusion feels inevitable by the third.
 "48 synthetic personas. The patterns are plausible; the people aren't. Use this to
 sharpen your questions for real interviews, not to make the decision."
 
-### Step 8: Follow-Up Loop
+### Step 7: Follow-Up Loop
 
 After delivering findings, offer:
 "Want to:
@@ -213,8 +196,8 @@ For each option:
   file. Present their full Chain-of-Feeling arc and verdict reasoning.
 - **(B) New exercise:** Go back to Step 2 with the same personas. The skill generates
   a new exercise config and runs `sim.sh exercise` (not `study`).
-- **(C) Compare:** Read memory.json for past studies. Run `sim.sh compare` if two
-  studies exist. Present the comparison.
+- **(C) Compare:** Check the subagent's memory for past studies. Run `sim.sh compare`
+  if two studies exist. Present the comparison.
 - **(D) Stakeholder summary:** Read cross-synthesis.md + top 5 persona files. Write a
   stakeholder-summary.md to .facet/output/{study}/ with: crystallizer, top 3 findings,
   standout personas (one line each), caveat. Tell the user the file path.
