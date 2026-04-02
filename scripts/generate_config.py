@@ -15,6 +15,8 @@ import os
 import sys
 import tempfile
 
+import yaml
+
 # Add parent directory to path so we can import parse_config
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from parse_config import parse_frontmatter
@@ -57,14 +59,14 @@ def generate_exercise_config(data, output_dir):
     exercise_name = data.get('exercise_name') or f"{data['product_name'].lower().replace(' ', '-')}-{study_type}"
     options = data.get('options', [])
 
-    # Build YAML frontmatter
+    # Build YAML frontmatter (use yaml.dump to handle quoting/escaping)
+    frontmatter = {
+        'exercise_name': exercise_name,
+        'study_type': study_type,
+        'options': [{'name': opt['name'], 'description': opt['description']} for opt in options],
+    }
     lines = ['---']
-    lines.append(f'exercise_name: {exercise_name}')
-    lines.append(f'study_type: {study_type}')
-    lines.append('options:')
-    for opt in options:
-        lines.append(f'  - name: "{opt["name"]}"')
-        lines.append(f'    description: "{opt["description"]}"')
+    lines.append(yaml.dump(frontmatter, default_flow_style=False, sort_keys=False).rstrip())
     lines.append('---')
     lines.append('')
 
@@ -131,15 +133,17 @@ def generate_study_config(data, exercise_paths, output_dir):
     calibration_context = data.get('calibration_context', '')
     codebase_data = data.get('codebase_data', {})
 
-    # Build YAML frontmatter
-    lines = ['---']
-    lines.append(f'segments: {segments}')
-    lines.append(f'personas_per_segment: {personas_per_segment}')
+    # Build YAML frontmatter (use yaml.dump for safe serialization)
+    frontmatter = {
+        'segments': segments,
+        'personas_per_segment': personas_per_segment,
+    }
     if calibration_context:
-        lines.append(f'calibration: .facet/calibration.md')
-    lines.append('exercises:')
-    for path in exercise_paths:
-        lines.append(f'  - config: {path}')
+        frontmatter['calibration'] = '.facet/calibration.md'
+    frontmatter['exercises'] = [{'config': path} for path in exercise_paths]
+
+    lines = ['---']
+    lines.append(yaml.dump(frontmatter, default_flow_style=False, sort_keys=False).rstrip())
     lines.append('---')
     lines.append('')
 
