@@ -154,6 +154,7 @@ echo '{
   "product_name": "<NAME>",
   "product_description": "<DESCRIPTION from conversation, max 500 words>",
   "research_question": "<USER ORIGINAL QUESTION>",
+  "study_name": "<SHORT-DESCRIPTIVE-SLUG, e.g. homepage-layout-comparison or pricing-15-vs-30>",
   "study_type": "<MATCHED TYPE>",
   "options": [
     {"name": "<OPTION 1>", "description": "<USER DESCRIPTION>"},
@@ -162,6 +163,10 @@ echo '{
   "calibration_context": "<INTERVIEW ANSWERS AS PARAGRAPHS>"
 }' | python3 ${CLAUDE_SKILL_DIR}/scripts/generate_config.py --output-dir .facet/output
 ```
+
+**Study naming:** Generate a short, descriptive slug for `study_name` that captures
+what's being tested (e.g., "homepage-layout-comparison", "pricing-tiers-freelancers").
+The script auto-increments if the name already exists (appends -2, -3, etc.).
 
 The script prints the study config path to stdout. Save it. If it fails, show the
 error and ask the user to clarify.
