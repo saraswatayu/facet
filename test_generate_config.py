@@ -137,6 +137,7 @@ class TestConfigGeneration(unittest.TestCase):
         self.assertEqual(fm['personas_per_segment'], 6)
         self.assertIn('studies', fm)
         self.assertIn('TestApp', body)
+        self.assertEqual(fm['studies'][0]['config'], os.path.basename(ex_path))
 
     def test_study_config_has_required_fields(self):
         data = self._base_data()

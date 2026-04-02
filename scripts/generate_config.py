@@ -169,7 +169,10 @@ def generate_run_config(data, study_paths, output_dir):
     }
     if calibration_context:
         frontmatter['calibration'] = '.facet/calibration.md'
-    frontmatter['studies'] = [{'config': path} for path in study_paths]
+    frontmatter['studies'] = [
+        {'config': os.path.relpath(path, output_dir)}
+        for path in study_paths
+    ]
 
     lines = ['---']
     lines.append(yaml.dump(frontmatter, default_flow_style=False, sort_keys=False).rstrip())
