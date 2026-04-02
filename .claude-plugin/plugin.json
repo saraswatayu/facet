@@ -1,0 +1,10 @@
+{
+  "name": "facet",
+  "description": "Product research simulation engine. Generate AI personas with real behavioral psychology, simulate them through pricing, features, onboarding, and retention decisions. Ask a product question, get a research synthesis.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Ayush Saraswat"
+  },
+  "repository": "https://github.com/saraswatayu/facet",
+  "license": "MIT"
+}
