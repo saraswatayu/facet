@@ -34,27 +34,29 @@ If `$ARGUMENTS` is empty (no research question provided), read and present
 
 ## With a Question: Full Research Flow
 
-### Step 1: Codebase Scan
+### Step 1: Codebase Scan (parallel)
 
-Use your native tools (Glob, Grep, Read) to scan PROJECT_ROOT for product data.
-You are an LLM with full codebase access. Use it.
+Launch 3 Explore subagents in parallel to scan PROJECT_ROOT. Explore agents use
+Haiku (fast, cheap, read-only). Each searches for one category:
 
-Look for:
-- **Pricing data:** Glob for files with pricing, plan, tier, billing, subscription
-  in the name or path. Grep for dollar amounts, price constants, plan definitions.
-- **Features:** Glob for feature flags, capability configs. Grep for feature lists,
-  toggles, enabled/disabled patterns.
-- **Onboarding flows:** Glob for onboarding, signup, welcome, tutorial files or
-  components. Read to understand the flow structure.
+**Agent A — Pricing:** Glob for files with pricing, plan, tier, billing, subscription
+in the name or path. Grep for dollar amounts, price constants, plan definitions.
+Read the most relevant files (first 100-200 lines).
 
-Read the most relevant files (first 100-200 lines). Extract concrete facts: dollar
-amounts, plan names, feature names, flow steps. Use your judgment about what matters.
+**Agent B — Features:** Glob for feature flags, capability configs. Grep for feature
+lists, toggles, enabled/disabled patterns. Read matching files.
 
-If you find useful data, present it conversationally:
+**Agent C — Onboarding:** Glob for onboarding, signup, welcome, tutorial files or
+components. Read to understand the flow structure.
+
+Each agent returns: file paths found, concrete values extracted (dollar amounts,
+plan names, feature names, flow steps), and a 1-2 sentence summary.
+
+Merge results from all 3. If any found useful data, present conversationally:
 - "I found pricing at $15/$30/$79 in src/config/plans.ts"
 - "Your feature flags define 12 features, 8 currently enabled"
 
-If you find nothing relevant, skip to Step 2 silently. Don't mention the scan.
+If none found anything relevant, skip to Step 2 silently.
 
 The scan finds FACTS. It does NOT generate option descriptions. Ask the user to
 describe each option fairly in their own words. This prevents config bias.
@@ -106,12 +108,13 @@ balance the descriptions before running?"
 This is the most common source of biased results. The study is only as fair as
 the option descriptions.
 
-Present the study design for approval:
-"Here's the study I'll run: [study type], [segments] segments, [personas] personas
-per segment, testing [options]. Calibrated with [summary of context].
-This will take ~[estimate] minutes. Proceed?"
+Present the study design for approval using AskUserQuestion:
+- Question: "Here's the study: [study type], [segments] segments × [personas_per_segment]
+  personas = [total] total, testing [options]. ~[estimate] minutes. Proceed?"
+- Options: "Run this study" / "Modify (change segments, personas, or options)" / "Cancel"
+- If the config has a neutrality warning, add it to the question text.
 
-Wait for approval. If the user wants changes, regenerate the config.
+Wait for the user's selection. If they choose Modify, ask what to change and regenerate.
 
 ### Step 4: Execution
 
@@ -161,7 +164,10 @@ burns API credits. Check:
 
 If issues are found, report to the user: "I found [N] quality issues in the persona
 panel. [Issue descriptions]. Want me to regenerate the flagged personas before running
-simulations?" This saves money by catching problems before the expensive simulation phase.
+simulations?" Use AskUserQuestion:
+- Question: "Found [N] quality issues in the persona panel: [issue list]. What next?"
+- Options: "Regenerate flagged personas" / "Proceed anyway" / "Cancel study"
+This saves money by catching problems before the expensive simulation phase.
 
 ### If Running Without the Subagent (fallback)
 
@@ -174,11 +180,12 @@ ${CLAUDE_SKILL_DIR}/sim.sh study --config <absolute-path-to-study-config> --outp
 
 Then continue with the Persona Gallery, Finding Spotlight, and Follow-Up Loop below.
 
-### Step 5: Persona Gallery
+### Steps 5-6: Persona Gallery + Finding Spotlight + Quality Checks (parallel)
 
-Read the 5 most interesting persona files from the output directory.
+After the study completes, launch 3 agents in parallel to analyze different output
+files simultaneously. This turns 30+ seconds of sequential reading into one pass:
 
-Selection criteria (read persona files and pick):
+**Agent A — Persona Gallery:** Read all persona files. Select the 5 most interesting:
 - Strongest advocate (most enthusiastic about the product)
 - Strongest critic (most resistant)
 - Most internally contradictory (said yes but with reservations suggesting churn)
@@ -201,11 +208,8 @@ Present each persona with BEHAVIOR, not just demographics:
 
 Full panel: .facet/output/{study}/personas/"
 
-### Step 6: Finding Spotlight
-
-Read cross-synthesis.md (or synthesis.md if single exercise). Extract the top findings.
-
-Structure the output as:
+**Agent B — Finding Spotlight:** Read cross-synthesis.md (or synthesis.md if single
+exercise). Extract the top findings and structure as:
 
 **Line 1: Crystallizer sentence.** Compress the answer into one punchy line.
 "$15 wins signup. $30 wins retention. Neither wins both."
@@ -245,12 +249,13 @@ sharpen your questions for real interviews, not to make the decision."
 
 ### Step 7: Follow-Up Loop
 
-After delivering findings, offer:
-"Want to:
- (A) Explore any persona's reasoning in detail
- (B) Run another exercise against these same personas
- (C) Compare these findings to a previous study
- (D) Export a stakeholder summary"
+After delivering findings, use AskUserQuestion to offer next steps:
+- Question: "What would you like to do next?"
+- Options:
+  - "Explore a persona's reasoning" / description: "Pick a persona, see their full decision arc"
+  - "Run another exercise" / description: "Test a different question with these same personas"
+  - "Compare to a previous study" / description: "See what changed since your last study"
+  - "Export stakeholder summary" / description: "Shareable one-page with findings + key personas"
 
 For each option:
 - **(A) Persona drill-down:** Ask which persona. Read their persona file + simulation
