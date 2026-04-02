@@ -33,18 +33,28 @@ If the user invokes `/facet` with no question or argument, read and present
 
 ### Step 1: Codebase Scan
 
-Run `python3 FACET_ROOT/scripts/scan-codebase.py --root PROJECT_ROOT` via Bash.
-Parse the JSON output.
+Use your native tools (Glob, Grep, Read) to scan PROJECT_ROOT for product data.
+You are an LLM with full codebase access. Use it.
 
-If `has_extractable_data` is true, present the findings conversationally:
-- "I found pricing data in src/config/plans.ts: $15/mo, $30/mo, $79/mo"
-- "12 feature flags in src/features.yaml"
-- Show only the most relevant findings. Don't dump the full JSON.
+Look for:
+- **Pricing data:** Glob for files with pricing, plan, tier, billing, subscription
+  in the name or path. Grep for dollar amounts, price constants, plan definitions.
+- **Features:** Glob for feature flags, capability configs. Grep for feature lists,
+  toggles, enabled/disabled patterns.
+- **Onboarding flows:** Glob for onboarding, signup, welcome, tutorial files or
+  components. Read to understand the flow structure.
 
-If `has_extractable_data` is false, skip to Step 2. Say nothing about the scan.
+Read the most relevant files (first 100-200 lines). Extract concrete facts: dollar
+amounts, plan names, feature names, flow steps. Use your judgment about what matters.
 
-The scan finds FACTS (dollar amounts, file names). It does NOT write descriptions.
-Ask the user to describe each option fairly. This prevents config bias.
+If you find useful data, present it conversationally:
+- "I found pricing at $15/$30/$79 in src/config/plans.ts"
+- "Your feature flags define 12 features, 8 currently enabled"
+
+If you find nothing relevant, skip to Step 2 silently. Don't mention the scan.
+
+The scan finds FACTS. It does NOT generate option descriptions. Ask the user to
+describe each option fairly in their own words. This prevents config bias.
 
 ### Step 2: Calibration Interview
 
