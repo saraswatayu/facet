@@ -257,7 +257,7 @@ Write the complete plan to: ${study_dir}/plan.md" \
 
     if [ ! -s "${study_dir}/plan.md" ]; then
         echo "ERROR: Plan was not generated."
-        exit 1
+        return 1
     fi
 
     echo ""
@@ -289,7 +289,7 @@ run_generate() {
 
     if [ ! -f "${study_dir}/plan.md" ]; then
         echo "ERROR: No plan found at ${study_dir}/plan.md. Run 'init' first."
-        exit 1
+        return 1
     fi
 
     # Count total personas from config
@@ -463,13 +463,15 @@ run_simulate() {
     local exercise_config="$2"
     local exercise_dir="$3"
     local concurrency="${4:-5}"
+    local simulations_dir="${5:-${exercise_dir}/simulations}"
+    local logs_dir="${6:-${exercise_dir}/logs}"
 
     local exercise_name study_type
     exercise_name=$(parse_frontmatter "$exercise_config" "exercise_name")
     study_type=$(parse_frontmatter "$exercise_config" "study_type")
 
-    mkdir -p "${exercise_dir}/simulations"
-    mkdir -p "${exercise_dir}/logs"
+    mkdir -p "$simulations_dir"
+    mkdir -p "$logs_dir"
 
     # Count personas
     local total
@@ -477,7 +479,7 @@ run_simulate() {
 
     if [ "$total" -eq 0 ]; then
         echo "ERROR: No personas found in ${study_dir}/personas/. Run 'init' first."
-        exit 1
+        return 1
     fi
 
     update_status "$exercise_dir" "simulate" "started" "0" "$total"
@@ -495,7 +497,7 @@ run_simulate() {
         local base_name
         base_name=$(basename "$persona_file" .md)
         local padded="${base_name#persona-}"
-        local output_path="${exercise_dir}/simulations/${base_name}.md"
+        local output_path="${simulations_dir}/${base_name}.md"
 
         # Skip if already generated
         if [ -s "$output_path" ]; then
@@ -503,7 +505,7 @@ run_simulate() {
             continue
         fi
 
-        local log_file="${exercise_dir}/logs/${base_name}.log"
+        local log_file="${logs_dir}/${base_name}.log"
 
         # Launch in background
         (
@@ -545,7 +547,7 @@ Write the simulation to: ${output_path}" \
     wait
 
     local completed
-    completed=$(count_files "${exercise_dir}/simulations" "persona-*.md")
+    completed=$(count_files "$simulations_dir" "persona-*.md")
     local failed=$((total - completed))
 
     echo ""
@@ -592,7 +594,7 @@ Write the artifacts to: ${exercise_dir}/artifacts.md" \
 
     if [ ! -s "${exercise_dir}/synthesis.md" ]; then
         echo "ERROR: Synthesis was not generated."
-        exit 1
+        return 1
     fi
 
     if [ ! -s "${exercise_dir}/artifacts.md" ]; then
@@ -618,7 +620,7 @@ run_cross_synthesize() {
 
     if [ "${#synthesis_files[@]}" -eq 0 ]; then
         echo "ERROR: No synthesis files found in ${study_dir}/exercises/*/. Run exercises first."
-        exit 1
+        return 1
     fi
 
     local exercise_count="${#synthesis_files[@]}"
@@ -654,8 +656,11 @@ Use full persona backgrounds for arc tracking."
     echo "╚═══════════════════════════════════════════════╝"
     echo ""
 
-    # Version-lock the cross-synthesis template
-    cp "${SCRIPT_DIR}/templates/cross-synthesis.md" "${study_dir}/.templates/" 2>/dev/null || true
+    mkdir -p "${study_dir}/.templates"
+    local cross_synthesis_template="${study_dir}/.templates/cross-synthesis.md"
+    if [ ! -f "$cross_synthesis_template" ]; then
+        ensure_version_locked_template "${SCRIPT_DIR}/templates/cross-synthesis.md" "$cross_synthesis_template"
+    fi
 
     FACET_PHASE="Cross-synthesis: ${exercise_count} exercises" \
     claude --print --verbose --output-format stream-json \
@@ -876,9 +881,7 @@ main() {
             mkdir -p "${study_dir}/personas"
 
             # Version-lock init-phase templates
-            mkdir -p "${study_dir}/.templates"
-            cp "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/"
-            cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
+            version_lock_study_templates "$study_dir"
             echo "Templates version-locked to ${study_dir}/.templates/"
 
             local total_personas
@@ -1161,21 +1164,29 @@ Write the comparison to: ${compare_output}" \
             estimate_time "$((segments * per_segment))" "$exercise_count" "$concurrency" "$output_dir"
             echo ""
 
-            # Phase 1: Init (skip if personas already exist)
+            # Phase 1: Init (skip only when the study inputs are complete)
             local persona_count=0
+            local expected_persona_count=$((segments * per_segment))
             if [ -d "${study_dir}/personas" ]; then
                 persona_count=$(count_files "${study_dir}/personas" "persona-*.md")
             fi
 
-            if [ "$persona_count" -gt 0 ]; then
-                echo "Skipping init: ${persona_count} personas already exist"
+            version_lock_study_templates "$study_dir"
+
+            if [ "$persona_count" -gt "$expected_persona_count" ]; then
+                echo "ERROR: Found ${persona_count} personas in ${study_dir}, but study config expects ${expected_persona_count}."
+                echo "Use a fresh output directory or remove the extra persona files before resuming."
+                exit 1
+            fi
+
+            if [ "$persona_count" -eq "$expected_persona_count" ] && [ -f "${study_dir}/plan.md" ]; then
+                echo "Skipping init: ${persona_count}/${expected_persona_count} personas already exist and plan.md is present"
                 echo ""
             else
-                # Run init by calling the functions directly
                 mkdir -p "${study_dir}/personas"
-                mkdir -p "${study_dir}/.templates"
-                cp "${SCRIPT_DIR}/templates/plan.md" "${study_dir}/.templates/"
-                cp "${SCRIPT_DIR}/templates/persona.md" "${study_dir}/.templates/"
+                if [ "$persona_count" -gt 0 ] || [ -f "${study_dir}/plan.md" ]; then
+                    echo "Resuming init: ${persona_count}/${expected_persona_count} personas ready"
+                fi
 
                 run_plan "$product_config" "$study_dir" "$calibration"
                 run_generate "$product_config" "$study_dir" "$concurrency" "$calibration"
@@ -1224,12 +1235,7 @@ Write the comparison to: ${compare_output}" \
 
                 local ex_study_type
                 ex_study_type=$(parse_frontmatter "$exercise_config_path" "study_type")
-                mkdir -p "${ex_dir}/.templates"
-                cp "${SCRIPT_DIR}/templates/simulation.md" "${ex_dir}/.templates/"
-                cp "${SCRIPT_DIR}/templates/analysis.md" "${ex_dir}/.templates/"
-                if [ -n "$ex_study_type" ] && [ -f "${SCRIPT_DIR}/study-types/${ex_study_type}.md" ]; then
-                    cp "${SCRIPT_DIR}/study-types/${ex_study_type}.md" "${ex_dir}/.templates/"
-                fi
+                version_lock_exercise_templates "$ex_dir" "$ex_study_type"
 
                 if ! run_simulate "$study_dir" "$exercise_config_path" "$ex_dir" "$concurrency"; then
                     echo "WARNING: Simulation failed for ${ex_name}"
