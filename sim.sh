@@ -611,7 +611,7 @@ Read these files for context:
 1. Cross-synthesis template (follow these instructions): ${study_dir}/.templates/cross-synthesis.md
 
 Then read ALL per-exercise synthesis files:
-$(printf '- %s\n' "${synthesis_files[@]}")
+$(for f in "${synthesis_files[@]}"; do echo "- $f"; done)
 
 ${persona_instruction}
 
