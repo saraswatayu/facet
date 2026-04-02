@@ -107,7 +107,7 @@ reflect patterns found in this data, not just LLM training priors."
 
 Read these files for context:
 1. Product config: ${config}
-2. Planning template (follow these instructions): ${SCRIPT_DIR}/templates/plan.md
+2. Planning template (follow these instructions): ${study_dir}/.templates/plan.md
 
 Key parameters:
 - Segments to create: ${segments}
@@ -240,7 +240,7 @@ If you notice patterns above (e.g., all positive, all analytical, all urban), de
 Read these files for context:
 1. Product config: ${config}
 2. Study plan (segment matrix, persona outlines, name registry, cross-references): ${study_dir}/plan.md
-3. Persona template (follow these instructions): ${SCRIPT_DIR}/templates/persona.md
+3. Persona template (follow these instructions): ${study_dir}/.templates/persona.md
 ${persona_calibration}
 You are generating persona number ${i} (persona-${padded}).
 Find persona #${i} in the plan's persona outlines and generate a full persona BACKGROUND for that outline.
@@ -328,7 +328,6 @@ run_simulate() {
     local exercise_name study_type
     exercise_name=$(parse_frontmatter "$exercise_config" "exercise_name")
     study_type=$(parse_frontmatter "$exercise_config" "study_type")
-    local study_type_rules="${SCRIPT_DIR}/study-types/${study_type}.md"
 
     mkdir -p "${exercise_dir}/simulations"
     mkdir -p "${exercise_dir}/logs"
@@ -377,8 +376,8 @@ run_simulate() {
 Read these files for context:
 1. Persona background: ${persona_file}
 2. Exercise config (options to test): ${exercise_config}
-3. Simulation template (follow these instructions): ${SCRIPT_DIR}/templates/simulation.md
-4. Study type simulation rules: ${study_type_rules}
+3. Simulation template (follow these instructions): ${exercise_dir}/.templates/simulation.md
+4. Study type simulation rules: ${exercise_dir}/.templates/${study_type}.md
 
 Generate this persona's reactions to the options defined in the exercise config.
 Stay completely in character — use the persona's voice, vocabulary, and decision-making patterns from their background.
@@ -438,7 +437,7 @@ run_analyze() {
 
 Read these files for context:
 1. Exercise config: ${exercise_config}
-2. Analysis template (follow these instructions): ${SCRIPT_DIR}/templates/analysis.md
+2. Analysis template (follow these instructions): ${exercise_dir}/.templates/analysis.md
 
 Then read ALL persona background files in: ${study_dir}/personas/
 Then read ALL simulation files in: ${exercise_dir}/simulations/
