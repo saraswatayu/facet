@@ -4,11 +4,12 @@ Pre-launch simulation engine: generates research-grounded personas and simulates
 
 ## Architecture
 
-Two-command pipeline, each composed of sequential phases:
+Three-command pipeline, each composed of sequential phases:
 
 ```
-sim.sh init:     Plan (Opus) → Generate (Sonnet, parallel waves)
-sim.sh exercise: Simulate (Sonnet, parallel) → Analyze (Opus)
+sim.sh init:       Plan (Opus) → Generate (Sonnet, parallel waves)
+sim.sh exercise:   Simulate (Sonnet, parallel) → Analyze (Opus)
+sim.sh synthesize: Cross-Synthesis (Opus) — unified findings across exercises
 ```
 
 Primary interface:
@@ -24,6 +25,7 @@ Key design: personas are generated ONCE and reused across multiple exercises.
 | Generate | `--model sonnet` | Cost efficiency at scale (50 parallel personas) |
 | Simulate | `--model sonnet` | Cost efficiency at scale (50 parallel simulations) |
 | Analyze | default (Opus) | Synthesis quality: reads all personas + simulations, produces recommendations |
+| Cross-Synthesize | default (Opus) | Reads all per-exercise syntheses + persona summaries, produces unified findings |
 
 ### Tool Restrictions
 
@@ -64,8 +66,9 @@ Each study type in `study-types/` specifies which behavioral economics framework
 | `features.md` | Kano model (must-be/performance/attractive/indifferent), feature interaction | Per-feature importance, excitement, WTP delta, usage frequency |
 | `onboarding.md` | Endowment effect, IKEA effect, psychological ownership, status quo bias, default effect, Fogg B=MAP | Completion funnel, time-to-value, ownership score, status quo shift rate |
 | `retention.md` | Hedonic adaptation, sunk cost, peak-end rule, post-purchase rationalization, trust decay | 12-month satisfaction arc, churn taxonomy, honest vs. passive retention rate |
+| `custom.md` | None (persona uses natural decision-making) | Gut reaction, reasoning, verdict, concerns per option |
 
-Each study type also has outcome requirements (e.g., "at least 1 persona should churn," "features study is the weakest use case — surface reactions, not ranked lists").
+Each study type also has outcome requirements (e.g., "at least 1 persona should churn," "features study is the weakest use case — surface reactions, not ranked lists"). The custom study type has no framework injection — for research questions that don't fit the standard types.
 
 ## Template Version Locking
 
@@ -95,12 +98,14 @@ templates/
   persona.md            — persona background generation (identity, psychology, domain, discovery)
   simulation.md         — per-persona exercise simulation (Chain-of-Feeling, BDI verdicts)
   analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files)
+  cross-synthesis.md    — cross-exercise synthesis → unified findings across all exercises
 study-types/
   pricing.md            — prospect theory, mental accounting, 12-month usage tables
   copy.md               — ELM, construal level, framing effects, per-variant scoring
   features.md           — Kano model, feature interaction, prioritization caveats
   onboarding.md         — endowment/IKEA effect, psychological ownership, Fogg B=MAP
   retention.md          — hedonic adaptation, sunk cost, peak-end rule, churn taxonomy
+  custom.md             — no framework injection, for non-standard research questions
 examples/
   superhuman-product.md    — example product config (10 segments × 5 personas)
   superhuman-pricing.md    — example pricing exercise (3 tier models)
@@ -110,6 +115,8 @@ examples/
   superhuman-retention.md  — example retention exercise (3 strategies)
 research/               — ~490-source research reports informing template design
 setup                   — dependency check and quickstart guide
+parse_config.py         — YAML frontmatter parser (replaces sed-based parsing)
+test_utils.py           — unit tests for parse_config.py
 ```
 
 ## Config Format
@@ -124,12 +131,13 @@ See `examples/` for complete examples.
 
 ```
 output/{product}/
-├── .templates/                     # version-locked init templates
+├── .templates/                     # version-locked init + cross-synthesis templates
 ├── plan.md                         # segment matrix, constraint vectors, diversity matrix
 ├── personas/
 │   ├── persona-001.md              # background ONLY (identity, psychology, domain, discovery)
 │   └── ...
 ├── .status                         # JSON-line phase completion tracking
+├── cross-synthesis.md              # unified findings across all exercises
 └── exercises/
     └── {exercise-name}/
         ├── .templates/             # version-locked exercise templates
