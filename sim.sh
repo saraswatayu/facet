@@ -467,7 +467,7 @@ run_simulate() {
     local logs_dir="${6:-${study_dir}/logs}"
 
     local study_name study_type
-    study_name=$(parse_frontmatter "$study_config" "study_name")
+    study_name=$(parse_frontmatter "$study_config" "exercise_name")
     study_type=$(parse_frontmatter "$study_config" "study_type")
 
     mkdir -p "$simulations_dir"
@@ -859,7 +859,7 @@ show_status() {
         if [ "$synth_count" -gt 0 ]; then
             echo ""
             echo "Cross-synthesis: not yet (${synth_count} study syntheses ready)"
-            echo "  Run: ./sim.sh synthesize --study ${panel_dir}"
+            echo "  Run: ./sim.sh synthesize --panel ${panel_dir}"
         fi
     fi
 
@@ -1046,10 +1046,11 @@ main() {
             fi
 
             local study_name
-            study_name=$(parse_frontmatter "$config" "study_name")
+            study_name=$(parse_frontmatter "$config" "exercise_name")
             if [ -z "$study_name" ]; then
-                # Fallback: derive from config filename
-                study_name=$(basename "$config" .md)
+                # Fallback: try study_name key, then derive from config filename
+                study_name=$(parse_frontmatter "$config" "study_name" 2>/dev/null || true)
+                [ -z "$study_name" ] && study_name=$(basename "$config" .md)
             fi
 
             local study_dir="${panel_dir}/studies/${study_name}"
@@ -1161,8 +1162,8 @@ Write the stability report to: ${study_dir}/stability-report.md" \
             echo "Results: ${panel_dir}/cross-synthesis.md"
             ;;
         compare)
-            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh compare --study <dir1> --study2 <dir2>"; exit 1; }
-            [ -z "$panel_dir2" ] && { echo "Usage: ./sim.sh compare --study <dir1> --study2 <dir2>"; exit 1; }
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --panel2 <dir2>"; exit 1; }
+            [ -z "$panel_dir2" ] && { echo "Usage: ./sim.sh compare --panel <dir1> --panel2 <dir2>"; exit 1; }
 
             # Resolve panel_dir2 to absolute path
             if [[ "$panel_dir2" != /* ]]; then
@@ -1233,8 +1234,8 @@ Write the comparison to: ${compare_output}" \
             echo "COMPARISON COMPLETE"
             echo "Results: ${compare_output}"
             ;;
-        study)
-            [ -z "$config" ] && { echo "Usage: ./sim.sh study --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"; exit 1; }
+        run)
+            [ -z "$config" ] && { echo "Usage: ./sim.sh run --config <study-config> [--name <name>] [--concurrency N] [--continue-on-error]"; exit 1; }
 
             # Parse study config
             local segments per_segment study_calibration
@@ -1342,7 +1343,7 @@ Write the comparison to: ${compare_output}" \
                 fi
 
                 local ex_name
-                ex_name=$(parse_frontmatter "$study_config_path" "study_name")
+                ex_name=$(parse_frontmatter "$study_config_path" "exercise_name")
                 [ -z "$ex_name" ] && ex_name=$(basename "$study_config_path" .md)
 
                 local ex_dir="${panel_dir}/studies/${ex_name}"
@@ -1404,7 +1405,7 @@ Write the comparison to: ${compare_output}" \
             echo "Per-study results in studies/*/"
             ;;
         status)
-            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh status --study <dir>"; exit 1; }
+            [ -z "$panel_dir" ] && { echo "Usage: ./sim.sh status --panel <dir>"; exit 1; }
             show_status "$panel_dir"
             ;;
         help|--help|-h)
