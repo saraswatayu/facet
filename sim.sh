@@ -1029,11 +1029,35 @@ main() {
         init)
             [ -z "$config" ] && { echo "Usage: ./sim.sh init --config <product-config> [--name <name>] [--concurrency N] [--calibration <file>]"; exit 1; }
 
-            # Overwrite protection: refuse to init into a directory with existing study data
+            local total_personas
+            total_personas=$(( $(parse_frontmatter "$config" "segments") * $(parse_frontmatter "$config" "personas_per_segment") ))
+            local resume_init="false"
+
+            local existing_personas=0
+            if [ -d "${panel_dir}/personas" ]; then
+                existing_personas=$(count_files "${panel_dir}/personas" "persona-*.md")
+            fi
+
+            if [ "$existing_personas" -gt "$total_personas" ]; then
+                echo "ERROR: Found ${existing_personas} personas in ${panel_dir}/, but config expects ${total_personas}."
+                echo "  Use a different --name or remove the extra persona files before rerunning init."
+                exit 1
+            fi
+
+            # Overwrite protection: refuse to init into a completed panel, but allow
+            # resuming partial persona generation after transient failures.
             if [ -f "${panel_dir}/plan.md" ]; then
-                echo "ERROR: Study already exists at ${panel_dir}/"
-                echo "  Existing plan: ${panel_dir}/plan.md"
-                echo "  To re-run, use a different --name or delete the existing study."
+                if [ "$existing_personas" -eq "$total_personas" ]; then
+                    echo "ERROR: Study already exists at ${panel_dir}/"
+                    echo "  Existing plan: ${panel_dir}/plan.md"
+                    echo "  To re-run, use a different --name or delete the existing study."
+                    exit 1
+                fi
+                resume_init="true"
+                echo "Resuming existing panel at ${panel_dir}/ (${existing_personas}/${total_personas} personas already generated)"
+            elif [ "$existing_personas" -gt 0 ]; then
+                echo "ERROR: Found persona files in ${panel_dir}/personas/ but no plan.md."
+                echo "  Remove the partial output or restore the plan before rerunning init."
                 exit 1
             fi
 
@@ -1042,9 +1066,6 @@ main() {
             # Version-lock init-phase templates
             version_lock_study_templates "$panel_dir"
             echo "Templates version-locked to ${panel_dir}/.templates/"
-
-            local total_personas
-            total_personas=$(( $(parse_frontmatter "$config" "segments") * $(parse_frontmatter "$config" "personas_per_segment") ))
 
             echo ""
             echo "FACET SIMULATION ENGINE v2"
@@ -1059,7 +1080,11 @@ main() {
             fi
             estimate_time "$total_personas" 0 "$concurrency" "$output_dir"
             echo ""
-            run_plan "$config" "$panel_dir" "$calibration"
+            if [ "$resume_init" = "true" ]; then
+                echo "Reusing existing plan at ${panel_dir}/plan.md"
+            else
+                run_plan "$config" "$panel_dir" "$calibration"
+            fi
             run_generate "$config" "$panel_dir" "$concurrency" "$calibration"
             echo ""
             echo "INIT COMPLETE — panel ready for studies"
