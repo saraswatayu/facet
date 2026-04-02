@@ -4,18 +4,21 @@ Pre-launch simulation engine: generates research-grounded personas and simulates
 
 ## Architecture
 
-Three-command pipeline, each composed of sequential phases:
+Six-command pipeline:
 
 ```
 sim.sh init:       Plan (Opus) → Generate (Sonnet, parallel waves)
-sim.sh exercise:   Simulate (Sonnet, parallel) → Analyze (Opus)
+sim.sh exercise:   Simulate (Sonnet, parallel) → Analyze (Opus)    [--runs N for stability]
 sim.sh synthesize: Cross-Synthesis (Opus) — unified findings across exercises
+sim.sh study:      Full lifecycle — init + all exercises + synthesize (single command)
+sim.sh compare:    Diff findings between two study runs
+sim.sh status:     Study progress, exercise completion, cross-synthesis readiness
 ```
 
 Primary interface:
 - **sim.sh** — bash orchestrator for terminal/CI use. Each phase is a `claude --print` subprocess.
 
-Key design: personas are generated ONCE and reused across multiple exercises.
+Key design: personas are generated ONCE and reused across multiple exercises. The `study` subcommand reads a single study config containing all exercises and runs the full pipeline.
 
 ### Model Routing
 
@@ -99,6 +102,8 @@ templates/
   simulation.md         — per-persona exercise simulation (Chain-of-Feeling, BDI verdicts)
   analysis.md           — unified analysis → synthesis.md + artifacts.md (TWO files)
   cross-synthesis.md    — cross-exercise synthesis → unified findings across all exercises
+  comparison.md         — study comparison → stable vs fragile findings
+  stability.md          — simulation stability report → per-persona consistency
 study-types/
   pricing.md            — prospect theory, mental accounting, 12-month usage tables
   copy.md               — ELM, construal level, framing effects, per-variant scoring
@@ -117,6 +122,7 @@ research/               — ~490-source research reports informing template desi
 setup                   — dependency check and quickstart guide
 parse_config.py         — YAML frontmatter parser (replaces sed-based parsing)
 test_utils.py           — unit tests for parse_config.py
+study-templates/        — 5 pre-built study configs (concept, pricing, activation, positioning, lifecycle)
 ```
 
 ## Config Format
@@ -125,7 +131,9 @@ test_utils.py           — unit tests for parse_config.py
 
 **Exercise config** (for `exercise`): Markdown with YAML frontmatter containing `exercise_name`, `study_type`, `options`, and optionally `copy_variants`. Body has options detail and copy variants.
 
-See `examples/` for complete examples.
+**Study config** (for `study`): Markdown with YAML frontmatter containing `segments`, `personas_per_segment`, optional `calibration`, and `exercises` array. Each exercise entry has a `config` path (relative to the study config file). Body is the product description (doubles as product config for init).
+
+See `examples/` for exercise/product configs, `study-templates/` for study configs.
 
 ## Output Structure
 
