@@ -11,7 +11,54 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts'))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from generate_config import match_study_type, validate_config, generate_exercise_config, generate_study_config
+from generate_config import match_study_type, validate_config, generate_exercise_config, generate_study_config, auto_scale
+
+
+class TestAutoScale(unittest.TestCase):
+
+    def test_quick_check(self):
+        data = {'research_question': 'Quick sanity check on pricing', 'options': [{'name': 'A'}, {'name': 'B'}]}
+        segments, pps = auto_scale(data)
+        self.assertEqual(segments, 3)
+        self.assertEqual(pps, 3)
+
+    def test_standard_ab(self):
+        data = {'research_question': 'Should I charge $15 or $30?', 'options': [{'name': 'A'}, {'name': 'B'}]}
+        segments, pps = auto_scale(data)
+        self.assertEqual(segments, 5)
+        self.assertEqual(pps, 5)
+
+    def test_deep_lifecycle(self):
+        data = {'research_question': 'Full audit of our product', 'options': [{'name': 'A'}]}
+        segments, pps = auto_scale(data)
+        self.assertEqual(segments, 6)
+        self.assertEqual(pps, 8)
+
+    def test_many_options_scales_up(self):
+        data = {'research_question': 'Compare these tiers', 'options': [{'name': f'Opt{i}'} for i in range(6)]}
+        segments, pps = auto_scale(data)
+        self.assertEqual(segments, 6)
+        self.assertEqual(pps, 8)
+
+    def test_default_without_explicit_count(self):
+        """generate_study_config uses auto_scale when segments/personas_per_segment not provided."""
+        data = {
+            'product_name': 'TestApp',
+            'product_description': 'A test app.',
+            'research_question': 'Should I charge $10 or $20?',
+            'options': [{'name': 'A', 'description': '$10'}, {'name': 'B', 'description': '$20'}],
+        }
+        output_dir = tempfile.mkdtemp(prefix='facet-test-scale-')
+        try:
+            ex_path, _ = generate_exercise_config(data, output_dir)
+            study_path = generate_study_config(data, [ex_path], output_dir)
+            from parse_config import parse_frontmatter
+            fm, _ = parse_frontmatter(study_path)
+            # A/B question → 5 segments × 5
+            self.assertEqual(fm['segments'], 5)
+            self.assertEqual(fm['personas_per_segment'], 5)
+        finally:
+            shutil.rmtree(output_dir, ignore_errors=True)
 
 
 class TestStudyTypeMatching(unittest.TestCase):

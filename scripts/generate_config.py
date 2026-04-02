@@ -85,11 +85,44 @@ def generate_exercise_config(data, output_dir):
     return filepath, exercise_name
 
 
+def auto_scale(data):
+    """Pick segment/persona counts based on study complexity.
+
+    Quick check (2 options, single exercise):     3 segments × 3 = 9 personas
+    Standard study (2-4 options, single exercise): 5 segments × 5 = 25 personas
+    Deep study (multi-exercise or 5+ options):     6 segments × 8 = 48 personas
+    """
+    num_options = len(data.get('options', []))
+    question = data.get('research_question', '').lower()
+
+    # User explicitly asked for quick/fast
+    if any(word in question for word in ['quick', 'fast', 'rough', 'sanity check']):
+        return 3, 3
+
+    # Multi-exercise or lifecycle study
+    if data.get('exercises') or any(word in question for word in ['full audit', 'lifecycle', 'comprehensive']):
+        return 6, 8
+
+    # Many options = deeper study
+    if num_options >= 5:
+        return 6, 8
+
+    # Simple A/B or A/B/C
+    if num_options <= 3:
+        return 5, 5
+
+    # Default
+    return 5, 5
+
+
 def generate_study_config(data, exercise_paths, output_dir):
     """Generate a study config that references exercise configs."""
     product_name = data['product_name']
-    segments = data.get('segments', 6)
-    personas_per_segment = data.get('personas_per_segment', 8)
+
+    # Auto-scale if user didn't specify
+    default_segments, default_pps = auto_scale(data)
+    segments = data.get('segments', default_segments)
+    personas_per_segment = data.get('personas_per_segment', default_pps)
     description = data.get('product_description', f'{product_name} product.')
     calibration_context = data.get('calibration_context', '')
     codebase_data = data.get('codebase_data', {})
