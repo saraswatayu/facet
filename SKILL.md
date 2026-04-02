@@ -184,22 +184,35 @@ Ask: "Ready to run?" Wait for confirmation.
 
 ## Step 4: Run the Study (phase by phase, with task progress)
 
-Do NOT run `sim.sh study` as one blocking call. Run each phase separately so you
+Do NOT run `sim.sh run` as one blocking call. Run each phase separately so you
 can report progress between them. Use TaskCreate/TaskUpdate to show a structured
 progress tree. Within each phase, run the command in the background and poll the
 filesystem for progress.
 
+**Check for existing panel first:**
+
+```bash
+PANEL_DIR=$(ls -d .facet/output/*/personas 2>/dev/null | head -1 | sed 's|/personas$||')
+```
+
+If `PANEL_DIR` is not empty, an existing panel was found:
+- Tell the user: "Found an existing research panel with [N] personas. Reusing them."
+- Skip Phase 1 (init). Go directly to Phase 2.
+- Use the discovered PANEL_DIR for all subsequent commands.
+
+If empty, proceed with Phase 1 to create a new panel.
+
 **Set up the task tree at the start:**
 
 Create all tasks upfront so the user sees the full pipeline:
-- TaskCreate: "Generate [N] personas ([S] segments x [P] each)"
-- TaskCreate: "Simulate [exercise name]" (one per exercise)
+- TaskCreate: "Create research panel ([N] personas)" (skip if panel exists)
+- TaskCreate: "Run [study name] study"
 - TaskCreate: "Analyze findings"
-- TaskCreate: "Cross-exercise synthesis" (only if 2+ exercises)
+- TaskCreate: "Cross-study synthesis" (only if 2+ studies in this panel)
 
-**Phase 1: Init (generate personas)**
+**Phase 1: Init (create research panel) — skip if panel exists**
 
-TaskUpdate the generate task to in_progress.
+TaskUpdate the panel task to in_progress.
 
 Run in background:
 ```bash
@@ -211,35 +224,33 @@ Poll every 30 seconds until the process completes:
 ```bash
 while kill -0 $INIT_PID 2>/dev/null; do
   sleep 30
-  DONE=$(ls .facet/output/<study-name>/personas/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
+  DONE=$(ls .facet/output/<panel-name>/personas/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
   echo "Personas: $DONE/<TOTAL> generated"
 done
 wait $INIT_PID
 ```
 
 After each poll, tell the user: "Personas: [done]/[total] generated..."
-When complete: TaskUpdate to completed. "[N] personas generated."
+When complete: TaskUpdate to completed. "Research panel created with [N] personas."
 
-**Phase 2: Exercise (simulate each persona)**
+**Phase 2: Study (simulate each persona)**
 
-For each exercise config referenced in the study config:
-
-TaskUpdate the simulate task to in_progress.
+TaskUpdate the study task to in_progress.
 
 Run in background:
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh exercise --study .facet/output/<study-name> --config <ABSOLUTE_EXERCISE_CONFIG_PATH> &
-EX_PID=$!
+${CLAUDE_SKILL_DIR}/sim.sh study --panel .facet/output/<panel-name> --config <ABSOLUTE_STUDY_CONFIG_PATH> &
+STUDY_PID=$!
 ```
 
 Poll every 30 seconds:
 ```bash
-while kill -0 $EX_PID 2>/dev/null; do
+while kill -0 $STUDY_PID 2>/dev/null; do
   sleep 30
-  DONE=$(ls .facet/output/<study-name>/exercises/<exercise>/simulations/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
+  DONE=$(ls .facet/output/<panel-name>/studies/<study-name>/simulations/persona-*.md 2>/dev/null | wc -l | tr -d ' ')
   echo "Simulations: $DONE/<TOTAL>"
 done
-wait $EX_PID
+wait $STUDY_PID
 ```
 
 Tell the user progress after each poll: "Simulations: [done]/[total]..."
@@ -249,24 +260,24 @@ When complete: TaskUpdate to completed. "Simulations done."
 
 TaskUpdate the analyze task to in_progress.
 
-Analysis runs automatically as part of `sim.sh exercise` (Phase 2 above). It uses
+Analysis runs automatically as part of `sim.sh study` (Phase 2 above). It uses
 simulation summaries when >12 personas and summary files exist. Spot-check
 verification also runs automatically when summaries are used.
 
-When Phase 2 completes, check for `verification.md` in the exercise output and
+When Phase 2 completes, check for `verification.md` in the study output and
 mention any caveats to the user.
 
 TaskUpdate to completed.
 
-**Phase 4: Synthesize (if multiple exercises)**
+**Phase 4: Synthesize (if multiple studies in this panel)**
 
-If the study has 2+ exercises:
+If the panel has 2+ completed studies:
 
 TaskUpdate the synthesis task to in_progress.
-Tell the user: "Synthesizing findings across exercises. ~2 minutes."
+Tell the user: "Synthesizing findings across studies. ~2 minutes."
 
 ```bash
-${CLAUDE_SKILL_DIR}/sim.sh synthesize --study .facet/output/<study-name>
+${CLAUDE_SKILL_DIR}/sim.sh synthesize --panel .facet/output/<panel-name>
 ```
 
 This is fast enough to run blocking. When done: "Synthesis complete."
