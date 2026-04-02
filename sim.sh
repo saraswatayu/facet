@@ -20,7 +20,7 @@ count_files() {
 parse_frontmatter() {
     local config="$1"
     local key="$2"
-    sed -n '/^---$/,/^---$/p' "$config" | grep "^${key}:" | head -1 | sed "s/^${key}: *//" | tr -d '"'
+    python3 "${SCRIPT_DIR}/parse_config.py" "$config" "$key"
 }
 
 # --- Validate persona file ---
