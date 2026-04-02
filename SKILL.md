@@ -77,7 +77,7 @@ study type. Use the keyword matching table. If ambiguous, ask the user.
 
 Read `FACET_ROOT/references/config-examples.md` for the correct YAML format.
 
-Construct JSON input for generate-config.py with:
+Construct JSON input for generate_config.py with:
 - product_name, product_description (from conversation + scan)
 - research_question (user's original question)
 - study_type (matched or user-chosen)
@@ -88,7 +88,7 @@ Construct JSON input for generate-config.py with:
 
 Run via Bash:
 ```
-echo '<JSON>' | python3 FACET_ROOT/scripts/generate-config.py --output-dir PROJECT_ROOT/.facet/output
+echo '<JSON>' | python3 FACET_ROOT/scripts/generate_config.py --output-dir PROJECT_ROOT/.facet/output
 ```
 
 If it exits non-zero, read stderr and tell the user what went wrong. Offer to fix it.

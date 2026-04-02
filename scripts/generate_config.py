@@ -30,7 +30,7 @@ STUDY_TYPE_KEYWORDS = {
              'brand voice', 'landing page', 'variant'],
     'features': ['feature', 'should we build', 'worth adding', 'capability',
                  'functionality', 'prioritize', 'roadmap'],
-    'onboarding': ['onboarding', 'activation', 'first-time', 'signup',
+    'onboarding': ['onboard', 'activation', 'first-time', 'signup',
                    'getting started', 'tutorial', 'welcome'],
     'retention': ['retain', 'churn', 'keep users', 'engagement', 'loyalty',
                   'cancel', 'renew', 'subscription fatigue'],
